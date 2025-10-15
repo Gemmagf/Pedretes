@@ -60,7 +60,12 @@ const translations = {
     example: "Beispiel",
     optimalRange: "Optimaler Bereich",
     historicalAverage: "Historischer Durchschnitt",
-    optimizationTip: "Tipp: Passe Material und Zeit an, um die Marge zu maximieren (25-35%)."
+    optimizationTip: "Tipp: Passe Material und Zeit an, um die Marge zu maximieren (25-35%).",
+    userManagement: "Benutzerverwaltung",
+    newUser: "Neuer Benutzer",      
+    extraHours: "Zusatzstunden",    
+    addUser: "Hinzufügen",
+    holiday: "Feiertag", 
   },
   en: {
     dashboard: "Workshop Dashboard",
@@ -119,7 +124,12 @@ const translations = {
     example: "Example",
     optimalRange: "Optimal Range",
     historicalAverage: "Historical Average",
-    optimizationTip: "Tip: Adjust materials and time to maximize margin (25-35%)."
+    optimizationTip: "Tip: Adjust materials and time to maximize margin (25-35%).",
+    userManagement: "User Management",
+    newUser: "New User",            
+    extraHours: "Extra Hours",      
+    addUser: "Add",   
+    holiday: "Holiday"
   },
   cat: {
     dashboard: "Dashboard del Taller",
@@ -178,7 +188,12 @@ const translations = {
     example: "Exemple",
     optimalRange: "Rang òptim",
     historicalAverage: "Mitjana històrica",
-    optimizationTip: "Consell: Ajusta materials i temps per maximitzar marge (25-35%)."
+    optimizationTip: "Consell: Ajusta materials i temps per maximitzar marge (25-35%).",
+    userManagement: "Gestió d'usuaris",
+    newUser: "Nou usuari",          
+    extraHours: "Hores extra",      
+    addUser: "Afegir", 
+    holiday: "Festius"
   }
 };
 

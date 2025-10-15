@@ -1,19 +1,30 @@
 import React, { createContext, useState, useContext } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
 const UsersContext = createContext();
 
 export const UsersProvider = ({ children }) => {
   const [users, setUsers] = useState([
-    { id: 1, name: 'Gemma', baseHours: 40, extraHours: 0 },
-    { id: 2, name: 'Companya', baseHours: 40, extraHours: 0 },
+    { id: uuidv4(), name: 'Sareta', baseHours: 40, extraHours: 0, assignedHours: 0 },
+    { id: uuidv4(), name: 'Valentin', baseHours: 40, extraHours: 0, assignedHours: 0 },
   ]);
 
-  const addUser = (name, baseHours = 40) => {
-    setUsers([...users, { id: Date.now(), name, baseHours, extraHours: 0 }]);
+  const addUser = (name) => {
+    if (!name.trim()) return;
+    const newUser = {
+      id: uuidv4(),
+      name,
+      baseHours: 40,
+      extraHours: 0,
+      assignedHours: 0,
+    };
+    setUsers(prev => [...prev, newUser]);
   };
 
-  const updateUserHours = (id, hours) => {
-    setUsers(users.map(u => (u.id === id ? { ...u, extraHours: hours } : u)));
+  const updateUserHours = (id, extraHours) => {
+    setUsers(prev =>
+      prev.map(user => user.id === id ? { ...user, extraHours } : user)
+    );
   };
 
   return (

@@ -1,17 +1,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useTranslation } from '../context/LanguageContext';
-import { Home, Layers, Package, Grid } from 'lucide-react';
+import { LayoutDashboard, Handshake, Settings, Gem, Users } from 'lucide-react';
 
 const Navigation = () => {
   const { t } = useTranslation();
 
   const links = [
-    { path: '/', icon: Home, label: t('dashboard') },
-    { path: '/alliance', icon: Layers, label: t('allianceFormTitle') },
-    { path: '/fassung', icon: Package, label: t('fassungFormTitle') },
-    { path: '/pave', icon: Grid, label: t('paveFormTitle') },
+    { path: '/', icon: LayoutDashboard, label: t('dashboard') },
+    { path: '/alliance', icon: Handshake, label: t('allianceFormTitle') },
+    { path: '/fassung', icon: Settings, label: t('fassungFormTitle') },
+    { path: '/pave', icon: Gem, label: t('paveFormTitle') },
+    { path: '/users', icon: Users, label: t('userManagement') },
   ];
 
   return (
