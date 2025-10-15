@@ -28,6 +28,39 @@ const translations = {
     gemsQuantity: "Anzahl Edelsteine",
     color: "Hauptfarbe",
     optimizePrice: "Preis optimieren",
+
+    // Noves claus Dashboard
+    dashboardTitle: "Dashboard der Werkstatt",
+    dashboardSubtitle: "Alles auf einen Blick: Projekte, Arbeitslast und Optimierungen",
+    ofTotal: "von {{total}} insgesamt",
+    completedRevenue: "Abgeschlossene Einnahmen",
+    basedOnCompleted: "Basierend auf abgeschlossenen Projekten",
+    overloadWarning: "Überlastung! Reduziere um {{percent}}% zur Optimierung",
+    pendingProjects: "Ausstehende Projekte: {{pending}}",
+    totalProjects: "Gesamtprojekte: {{total}}",
+    prototypeActive: "Aktiver Prototyp - Alles simuliert",
+    allProjects: "Alle Projekte",
+    historicalData: "(Historische Daten sichtbar)",
+    noProjects: "Keine Projekte in dieser Kategorie. Erstelle eines im Formular!",
+    statusPending: "Ausstehend",
+    statusInProgress: "In Bearbeitung",
+    statusCompleted: "Abgeschlossen",
+    statusUnknown: "Unbekannt",
+    estimated: "geschätzt",
+    done: "erledigt",
+    gems: "Edelsteine",
+    start: "Start",
+    due: "Fällig",
+    notes: "Notizen",
+    formula: "Formel",
+    materials: "Materialien",
+    margin: "Gewinnspanne",
+    optimizationFor: "Optimierung für {{type}}",
+    basedOnHistorical: "Basierend auf {{count}} historischen Projekten",
+    example: "Beispiel",
+    optimalRange: "Optimaler Bereich",
+    historicalAverage: "Historischer Durchschnitt",
+    optimizationTip: "Tipp: Passe Material und Zeit an, um die Marge zu maximieren (25-35%)."
   },
   en: {
     dashboard: "Workshop Dashboard",
@@ -54,6 +87,39 @@ const translations = {
     gemsQuantity: "Gems Quantity",
     color: "Main Color",
     optimizePrice: "Optimize Price",
+
+    // Noves claus Dashboard
+    dashboardTitle: "Workshop Dashboard",
+    dashboardSubtitle: "Everything visible: projects, workload and optimizations",
+    ofTotal: "of {{total}} total",
+    completedRevenue: "Completed Revenue",
+    basedOnCompleted: "Based on completed projects",
+    overloadWarning: "Overload! Reduce by {{percent}}% to optimize",
+    pendingProjects: "Pending projects: {{pending}}",
+    totalProjects: "Total projects: {{total}}",
+    prototypeActive: "Active Prototype - All simulated",
+    allProjects: "All Projects",
+    historicalData: "(Historical data visible)",
+    noProjects: "No projects in this category. Create one in the forms!",
+    statusPending: "Pending",
+    statusInProgress: "In Progress",
+    statusCompleted: "Completed",
+    statusUnknown: "Unknown",
+    estimated: "estimated",
+    done: "done",
+    gems: "gems",
+    start: "Start",
+    due: "Due",
+    notes: "Notes",
+    formula: "Formula",
+    materials: "Materials",
+    margin: "Margin",
+    optimizationFor: "Optimization for {{type}}",
+    basedOnHistorical: "Based on {{count}} historical projects",
+    example: "Example",
+    optimalRange: "Optimal Range",
+    historicalAverage: "Historical Average",
+    optimizationTip: "Tip: Adjust materials and time to maximize margin (25-35%)."
   },
   cat: {
     dashboard: "Dashboard del Taller",
@@ -80,13 +146,52 @@ const translations = {
     gemsQuantity: "Quantitat de gemmes",
     color: "Color Principal",
     optimizePrice: "Optimitzar Preu",
+
+    // Noves claus Dashboard
+    dashboardTitle: "Dashboard del Taller",
+    dashboardSubtitle: "Tot visible: projectes, càrrega i optimitzacions",
+    ofTotal: "de {{total}} total",
+    completedRevenue: "Ingressos Completats",
+    basedOnCompleted: "Basat en projectes completats",
+    overloadWarning: "Sobrecàrrega! Redueix {{percent}}% per optimitzar",
+    pendingProjects: "Projectes pendents: {{pending}}",
+    totalProjects: "Total projectes: {{total}}",
+    prototypeActive: "Prototip actiu - Tot simulat",
+    allProjects: "Tots els projectes",
+    historicalData: "(Dades històriques visibles)",
+    noProjects: "No hi ha projectes en aquesta categoria. Crea’n un al formulari!",
+    statusPending: "Pendents",
+    statusInProgress: "En Marxa",
+    statusCompleted: "Completat",
+    statusUnknown: "Desconegut",
+    estimated: "estimades",
+    done: "fet",
+    gems: "gemmes",
+    start: "Inici",
+    due: "Lliurament",
+    notes: "Notes",
+    formula: "Fórmula",
+    materials: "Materials",
+    margin: "Marge",
+    optimizationFor: "Optimització per a {{type}}",
+    basedOnHistorical: "Basat en {{count}} projectes històrics",
+    example: "Exemple",
+    optimalRange: "Rang òptim",
+    historicalAverage: "Mitjana històrica",
+    optimizationTip: "Consell: Ajusta materials i temps per maximitzar marge (25-35%)."
   }
 };
 
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState('de');
 
-  const t = (key) => translations[language][key] || key;
+  const t = (key, vars = {}) => {
+    let text = translations[language]?.[key] || key;
+    Object.keys(vars).forEach(v => {
+      text = text.replace(`{{${v}}}`, vars[v]);
+    });
+    return text;
+  };
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
