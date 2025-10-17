@@ -66,6 +66,14 @@ const translations = {
     extraHours: "Zusatzstunden",    
     addUser: "Hinzufügen",
     holiday: "Feiertag", 
+    stoneSize: "Steingröße (mm)",
+    stoneType: "Steinart",
+    style: "Stil",
+    shape: "Form",
+    timePerStone: "Zeit pro Stein (Minuten)",
+    pricePerStone: "Preis pro Stein (CHF)",
+    goldBack: "Gold zurück (Gramm)",
+    loading: "Lade Daten...",
   },
   en: {
     dashboard: "Workshop Dashboard",
@@ -129,7 +137,15 @@ const translations = {
     newUser: "New User",            
     extraHours: "Extra Hours",      
     addUser: "Add",   
-    holiday: "Holiday"
+    holiday: "Holiday",
+    stoneSize: "Stone Size (mm)",
+    stoneType: "Stone Type",
+    style: "Style",
+    shape: "Shape",
+    timePerStone: "Time per Stone (minutes)",
+    pricePerStone: "Price per Stone (CHF)",
+    goldBack: "Gold Back (grams)",
+    loading: "Loading data...",
   },
   cat: {
     dashboard: "Dashboard del Taller",
@@ -193,7 +209,15 @@ const translations = {
     newUser: "Nou usuari",          
     extraHours: "Hores extra",      
     addUser: "Afegir", 
-    holiday: "Festius"
+    holiday: "Festius",
+    stoneSize: "Mida de pedra (mm)",
+    stoneType: "Tipus de gemma",
+    style: "Estil",
+    shape: "Forma",
+    timePerStone: "Temps per gemma (minuts)",
+    pricePerStone: "Preu per gemma (CHF)",
+    goldBack: "Or recuperat (grams)",
+    loading: "Carregant dades...",
   }
 };
 
