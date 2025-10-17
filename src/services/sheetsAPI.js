@@ -1,16 +1,15 @@
-const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbw_GOZyFNBBcxp4_UhOFBdvSyJ2qcddNTQqNhm_uMN6_WahH_rSgEK63MR-08HocHJb/exec';
+const BASE_URL = "https://script.google.com/macros/s/AKfycbynCcMasb-wHuT8S31YblHMO8jFDb-SSj8ZECXQsY9b0kMtEhSuFhQCONMy6LgfXKc/exec";
 
-export const getRows = async (sheetName) => {
-  const res = await fetch(`${SHEETS_API_URL}?sheet=${sheetName}`);
-  const data = await res.json();
-  return data;
+export const getSheetData = async (sheetName) => {
+  const res = await fetch(`${BASE_URL}?sheet=${sheetName}`);
+  return res.json();
 };
 
-export const addRow = async (sheetName, row) => {
-  const res = await fetch(SHEETS_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sheet: sheetName, ...row })
+export const addRow = async (sheetName, data) => {
+  const res = await fetch(BASE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...data, sheet: sheetName }),
   });
   return res.json();
 };
