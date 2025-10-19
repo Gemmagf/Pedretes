@@ -1,0 +1,101 @@
+Codi per google appScript qe funciona epr llegir: 
+// --- UTILITIES ---
+
+/**
+ * Convert a range of values from a sheet into JSON
+ * @param {Array} data - 2D array from getValues()
+ * @returns {Array} - Array of objects
+ */
+function convertRangeToJson(data) {
+  var jsonArray = [];
+  if (!data || data.length < 2) return jsonArray; // no data
+
+  var headers = data[0];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var record = {};
+    for (var j = 0; j < headers.length; j++) {
+      record[headers[j]] = row[j];
+    }
+    jsonArray.push(record);
+  }
+  return jsonArray;
+}
+
+/**
+ * Return standardized JSON response
+ */
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// --- GET DATA ---
+function doGet(e) {
+  try {
+    var sheetName = e.parameter.sheet;
+    if (!sheetName) return jsonResponse({ error: "No sheet specified" });
+
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+    if (!sheet) return jsonResponse({ error: "Sheet not found" });
+
+    var data = sheet.getDataRange().getValues();
+    var json = convertRangeToJson(data);
+    return jsonResponse(json);
+
+  } catch (err) {
+    return jsonResponse({ status: "error", message: err.toString() });
+  }
+}
+
+// --- POST DATA ---
+function doPost(e) {
+  try {
+    var body = JSON.parse(e.postData.contents);
+    var sheetName = body.sheet;
+    if (!sheetName) throw "No sheet specified";
+
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+    if (!sheet) throw "Sheet not found";
+
+    var headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];
+
+    // Map body keys to header keys
+    var keyMap = {
+      stoneSize: "Steingröße (mm)",
+      stoneType: "Steinart",
+      material: "Material",
+      style: "Stil",
+      shape: "Form",
+      timePerStone: "Zeit pro Stein (Minuten)",
+      pricePerStone: "Preis pro Stein (CHF)",
+      goldBack: "Gold zurück (Gramm)",
+      clientName: "Kunde",
+      id: "ID",
+      Creació: "Creació"
+    };
+
+    var newRow = headers.map(h => {
+      for (let key in keyMap) {
+        if (keyMap[key] === h) return body[key] || '';
+      }
+      return '';
+    });
+
+    // Ensure ID and Creació
+    var idIndex = headers.indexOf("ID");
+    if (!body.id && idIndex !== -1) newRow[idIndex] = Utilities.getUuid();
+    var createIndex = headers.indexOf("Creació");
+    if (!body.Creació && createIndex !== -1) newRow[createIndex] = new Date();
+
+    sheet.appendRow(newRow);
+
+    return ContentService.createTextOutput(JSON.stringify({status:'success'}))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({status:'error', message: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
