@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext } from "react";
 
 const LanguageContext = createContext();
 
@@ -29,7 +29,7 @@ const translations = {
     color: "Hauptfarbe",
     optimizePrice: "Preis optimieren",
 
-    // Noves claus Dashboard
+    // Dashboard extras
     dashboardTitle: "Dashboard der Werkstatt",
     dashboardSubtitle: "Alles auf einen Blick: Projekte, Arbeitslast und Optimierungen",
     ofTotal: "von {{total}} insgesamt",
@@ -46,28 +46,6 @@ const translations = {
     statusInProgress: "In Bearbeitung",
     statusCompleted: "Abgeschlossen",
     statusUnknown: "Unbekannt",
-    estimated: "geschätzt",
-    done: "erledigt",
-    gems: "Edelsteine",
-    start: "Start",
-    due: "Fällig",
-    notes: "Notizen",
-    formula: "Formel",
-    materials: "Materialien",
-    margin: "Gewinnspanne",
-    optimizationFor: "Optimierung für {{type}}",
-    basedOnHistorical: "Basierend auf {{count}} historischen Projekten",
-    example: "Beispiel",
-    optimalRange: "Optimaler Bereich",
-    historicalAverage: "Historischer Durchschnitt",
-    optimizationTip: "Tipp: Passe Material und Zeit an, um die Marge zu maximieren (25-35%).",
-    userManagement: "Benutzerverwaltung",
-    newUser: "Neuer Benutzer",      
-    extraHours: "Zusatzstunden",    
-    addUser: "Hinzufügen",
-    holiday: "Feiertag", 
-    stoneSize: "Steingröße (mm)",
-    stoneType: "Steinart",
     style: "Stil",
     shape: "Form",
     timePerStone: "Zeit pro Stein (Minuten)",
@@ -75,6 +53,7 @@ const translations = {
     goldBack: "Gold zurück (Gramm)",
     loading: "Lade Daten...",
   },
+
   en: {
     dashboard: "Workshop Dashboard",
     newProject: "New Project",
@@ -101,7 +80,7 @@ const translations = {
     color: "Main Color",
     optimizePrice: "Optimize Price",
 
-    // Noves claus Dashboard
+    // Dashboard extras
     dashboardTitle: "Workshop Dashboard",
     dashboardSubtitle: "Everything visible: projects, workload and optimizations",
     ofTotal: "of {{total}} total",
@@ -118,28 +97,6 @@ const translations = {
     statusInProgress: "In Progress",
     statusCompleted: "Completed",
     statusUnknown: "Unknown",
-    estimated: "estimated",
-    done: "done",
-    gems: "gems",
-    start: "Start",
-    due: "Due",
-    notes: "Notes",
-    formula: "Formula",
-    materials: "Materials",
-    margin: "Margin",
-    optimizationFor: "Optimization for {{type}}",
-    basedOnHistorical: "Based on {{count}} historical projects",
-    example: "Example",
-    optimalRange: "Optimal Range",
-    historicalAverage: "Historical Average",
-    optimizationTip: "Tip: Adjust materials and time to maximize margin (25-35%).",
-    userManagement: "User Management",
-    newUser: "New User",            
-    extraHours: "Extra Hours",      
-    addUser: "Add",   
-    holiday: "Holiday",
-    stoneSize: "Stone Size (mm)",
-    stoneType: "Stone Type",
     style: "Style",
     shape: "Shape",
     timePerStone: "Time per Stone (minutes)",
@@ -147,12 +104,13 @@ const translations = {
     goldBack: "Gold Back (grams)",
     loading: "Loading data...",
   },
+
   cat: {
     dashboard: "Dashboard del Taller",
     newProject: "Nou Projecte",
     projectsInProgress: "Projectes en Marxa",
     totalCompletedRevenue: "Ingressos Completats",
-    weeklyWorkload: "Carga Setmanal",
+    weeklyWorkload: "Càrrega Setmanal",
     totalCompleted: "Completats Total",
     createProject: "Crear Projecte",
     pending: "Pendents",
@@ -173,7 +131,7 @@ const translations = {
     color: "Color Principal",
     optimizePrice: "Optimitzar Preu",
 
-    // Noves claus Dashboard
+    // Dashboard extras
     dashboardTitle: "Dashboard del Taller",
     dashboardSubtitle: "Tot visible: projectes, càrrega i optimitzacions",
     ofTotal: "de {{total}} total",
@@ -190,43 +148,21 @@ const translations = {
     statusInProgress: "En Marxa",
     statusCompleted: "Completat",
     statusUnknown: "Desconegut",
-    estimated: "estimades",
-    done: "fet",
-    gems: "gemmes",
-    start: "Inici",
-    due: "Lliurament",
-    notes: "Notes",
-    formula: "Fórmula",
-    materials: "Materials",
-    margin: "Marge",
-    optimizationFor: "Optimització per a {{type}}",
-    basedOnHistorical: "Basat en {{count}} projectes històrics",
-    example: "Exemple",
-    optimalRange: "Rang òptim",
-    historicalAverage: "Mitjana històrica",
-    optimizationTip: "Consell: Ajusta materials i temps per maximitzar marge (25-35%).",
-    userManagement: "Gestió d'usuaris",
-    newUser: "Nou usuari",          
-    extraHours: "Hores extra",      
-    addUser: "Afegir", 
-    holiday: "Festius",
-    stoneSize: "Mida de pedra (mm)",
-    stoneType: "Tipus de gemma",
     style: "Estil",
     shape: "Forma",
     timePerStone: "Temps per gemma (minuts)",
     pricePerStone: "Preu per gemma (CHF)",
     goldBack: "Or recuperat (grams)",
     loading: "Carregant dades...",
-  }
+  },
 };
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('de');
+  const [language, setLanguage] = useState("de");
 
   const t = (key, vars = {}) => {
     let text = translations[language]?.[key] || key;
-    Object.keys(vars).forEach(v => {
+    Object.keys(vars).forEach((v) => {
       text = text.replace(`{{${v}}}`, vars[v]);
     });
     return text;
