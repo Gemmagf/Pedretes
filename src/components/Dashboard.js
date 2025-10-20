@@ -1,160 +1,123 @@
+// src/components/Dashboard.js
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "../context/LanguageContext";
+import Calendar from "react-calendar"; // npm install react-calendar
+import "react-calendar/dist/Calendar.css";
 import { getSheetData } from "../services/sheetsAPI";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
+import { useTranslation } from "../context/LanguageContext";
+import ProjectCard from "./ProjectCard"; // Component mínim per mostrar projectes
 
 const Dashboard = () => {
-  const { t, language } = useTranslation();
-  const [projects, setProjects] = useState([]);
-  const [view, setView] = useState("dayGridMonth");
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [stats, setStats] = useState({});
+  const { t } = useTranslation();
 
-  // --- Load data from Google Sheet ---
-  useEffect(() => {
-    const loadData = async () => {
-      const data = await getSheetData("Alliance");
-      setProjects(data);
-      calculateStats(data);
-    };
-    loadData();
-  }, []);
+  // Estat del calendari
+  const [date, setDate] = useState(new Date());
+  const [view, setView] = useState("month"); // month/week/day
 
-  // --- Compute summary data for the top-left card ---
-  const calculateStats = (data) => {
-    const total = data.length;
-    const completed = data.filter((p) => p.Status === "completed").length;
-    const pending = data.filter((p) => p.Status === "pending").length;
-    const inProgress = data.filter((p) => p.Status === "in_progress").length;
-    const totalRevenue = data.reduce(
-      (sum, p) => sum + (parseFloat(p.Preu) || 0),
-      0
-    );
-
-    setStats({ total, completed, pending, inProgress, totalRevenue });
-  };
-
-  // --- Calendar events from sheet ---
-  const events = projects.map((p) => ({
-    title: p.ProjectName || "No name",
-    start: p.StartDate,
-    end: p.EndDate,
-    backgroundColor:
-      p.Status === "completed"
-        ? "#9ca3af" // gray
-        : p.Status === "in_progress"
-        ? "#3b82f6" // blue
-        : "#f97316", // orange
-  }));
-
-  // --- Filtered projects for list ---
-  const currentMonth = selectedDate.getMonth();
-  const currentProjects = projects.filter((p) => {
-    const start = new Date(p.StartDate);
-    return start.getMonth() === currentMonth;
+  // Dades per bloc notes
+  const [summary, setSummary] = useState({
+    totalProjects: 0,
+    completedProjects: 0,
+    scheduledTime: 0,
+    timeSpent: 0,
+    freeTime: 0,
+    bookedTime: 0,
+    daysOff: 0,
   });
 
+  // Dades de projectes del període
+  const [projects, setProjects] = useState([]);
+
+  // Dades de revenue
+  const [revenue, setRevenue] = useState({
+    currentMonth: 0,
+    prevYearSameMonth: 0,
+    tips: [],
+  });
+
+  // Funció per obtenir dades (dummy inicialment)
+  useEffect(() => {
+    const fetchData = async () => {
+      // Exemple: llegeix projectes de "Alliance" (es pot afegir Fassung i Pave)
+      const data = await getSheetData("Alliance");
+      // Filtra projectes segons data seleccionada (a implementar)
+      setProjects(data);
+
+      // Exemple: calcular resum (dummy)
+      const total = data.length;
+      const completed = data.filter(p => p.status === "Completed").length;
+      const scheduled = data.reduce((acc, p) => acc + Number(p.timePerStone || 0), 0);
+      setSummary({
+        totalProjects: total,
+        completedProjects: completed,
+        scheduledTime: scheduled,
+        timeSpent: scheduled * 0.8, // dummy
+        freeTime: 40 - scheduled,    // dummy
+        bookedTime: scheduled * 0.9, // dummy
+        daysOff: 2                   // dummy
+      });
+
+      setRevenue({
+        currentMonth: data.reduce((acc, p) => acc + Number(p.pricePerStone || 0), 0),
+        prevYearSameMonth: 5000, // dummy
+        tips: ["Ajusta material i temps per maximitzar marge", "No tots els preus són exactes"]
+      });
+    };
+    fetchData();
+  }, [date]);
+
   return (
-    <div className="p-6 grid grid-cols-2 gap-6 h-[90vh]">
-      {/* --- TOP LEFT: WORKFLOW CARD --- */}
-      <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between">
-        <h2 className="text-xl font-semibold mb-2">
-          🧭 {t("dashboardTitle")}
-        </h2>
-        <p className="text-gray-600 mb-4">{t("dashboardSubtitle")}</p>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "20px", padding: "20px" }}>
+      {/* Bloc notes i calendari */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        {/* Bloc notes */}
+        <div className="notes-block" style={{ padding: "15px", border: "1px solid #ddd", borderRadius: "10px", backgroundColor: "#f9f9f9" }}>
+          <h2>{t("dashboardTitle")}</h2>
+          <p>{t("totalProjects")}: {summary.totalProjects}</p>
+          <p>{t("statusCompleted")}: {summary.completedProjects}</p>
+          <p>Temps programat: {summary.scheduledTime}h</p>
+          <p>Temps passat: {summary.timeSpent}h</p>
+          <p>Temps lliure futur: {summary.freeTime}h</p>
+          <p>Temps booked: {summary.bookedTime}h</p>
+          <p>Days Off: {summary.daysOff}</p>
+        </div>
 
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <p>
-            🧩 {t("totalProjects", { total: stats.total || 0 })}:{" "}
-            <span className="font-medium">{stats.total}</span>
-          </p>
-          <p>
-            🔧 {t("in_progress")}:{" "}
-            <span className="font-medium">{stats.inProgress}</span>
-          </p>
-          <p>
-            ✅ {t("completed")}:{" "}
-            <span className="font-medium">{stats.completed}</span>
-          </p>
-          <p>
-            ⏳ {t("pending")}:{" "}
-            <span className="font-medium">{stats.pending}</span>
-          </p>
-          <p className="col-span-2 border-t pt-2 mt-2 text-sm text-gray-700">
-            💰 {t("completedRevenue")}:{" "}
-            <span className="font-bold text-green-600">
-              {stats.totalRevenue?.toFixed(2)} CHF
-            </span>
-          </p>
+        {/* Calendari */}
+        <div className="calendar-block" style={{ padding: "15px", border: "1px solid #ddd", borderRadius: "10px" }}>
+          <Calendar
+            onChange={setDate}
+            value={date}
+            view={view}
+            onViewChange={({ activeStartDate, view }) => setView(view)}
+          />
+          <div style={{ marginTop: "10px" }}>
+            <button onClick={() => setView("month")}>Month</button>
+            <button onClick={() => setView("week")}>Week</button>
+            <button onClick={() => setView("day")}>Day</button>
+          </div>
         </div>
       </div>
 
-      {/* --- TOP RIGHT: CALENDAR --- */}
-      <div className="bg-white rounded-2xl shadow p-4">
-        <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView={view}
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay,dayGridYear",
-          }}
-          events={events}
-          height="70vh"
-          locale={language}
-          datesSet={(arg) => setSelectedDate(arg.start)}
-        />
-      </div>
-
-      {/* --- BOTTOM LEFT: PROJECT LIST --- */}
-      <div className="bg-white rounded-2xl shadow p-4 overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-2">
-          📋 {t("projectsInProgress")}
-        </h3>
-        {currentProjects.length === 0 ? (
-          <p className="text-gray-500">{t("noProjects")}</p>
-        ) : (
-          <ul>
-            {currentProjects.map((p, i) => (
-              <li
-                key={i}
-                className="border-b py-2 flex justify-between items-center"
-              >
-                <div>
-                  <p className="font-medium">{p.ProjectName}</p>
-                  <p className="text-xs text-gray-500">
-                    {p.Client} – {p.Preu || "?"} CHF
-                  </p>
-                </div>
-                <button className="text-blue-500 text-lg font-bold">＋</button>
-              </li>
+      {/* Part dreta: projectes + revenue */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        {/* Projectes */}
+        <div>
+          <h3>Projectes ({projects.length})</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {projects.map((p, idx) => (
+              <ProjectCard key={idx} project={p} />
             ))}
-          </ul>
-        )}
-      </div>
-
-      {/* --- BOTTOM RIGHT: REVENUE + TIPS --- */}
-      <div className="bg-white rounded-2xl shadow p-4">
-        <h3 className="text-lg font-semibold mb-2">
-          📈 {t("completedRevenue")}
-        </h3>
-        <p className="text-gray-600 mb-4">{t("basedOnCompleted")}</p>
-
-        <div className="text-2xl font-bold text-green-600 mb-2">
-          {stats.totalRevenue?.toFixed(2)} CHF
+          </div>
         </div>
-        <p className="text-sm text-gray-500 mb-2">
-          {t("optimizationTip")}
-        </p>
 
-        <ul className="text-sm text-gray-600 list-disc pl-5 space-y-1">
-          <li>⚠️ {t("overloadWarning", { percent: 15 })}</li>
-          <li>💡 {t("pendingProjects", { pending: stats.pending || 0 })}</li>
-          <li>📊 {t("basedOnHistorical", { count: 12 })}</li>
-        </ul>
+        {/* Revenue */}
+        <div style={{ padding: "15px", border: "1px solid #ddd", borderRadius: "10px", backgroundColor: "#f9f9f9" }}>
+          <h3>Revenue {date.toLocaleString("default", { month: "long" })}</h3>
+          <p>Actual: CHF {revenue.currentMonth}</p>
+          <p>Any passat: CHF {revenue.prevYearSameMonth}</p>
+          <ul>
+            {revenue.tips.map((tip, i) => <li key={i}>{tip}</li>)}
+          </ul>
+        </div>
       </div>
     </div>
   );
