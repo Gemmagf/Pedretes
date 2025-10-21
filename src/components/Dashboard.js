@@ -118,10 +118,21 @@ const Dashboard = () => {
       default:
         end.setMonth(start.getMonth() + 1);
     }
+    const normalizeDate = (d) => {
+      if (!d) return null; // handle undefined/null
+      const date = new Date(d);
+      if (isNaN(date)) return null; // invalid date
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    };
 
     const visibleProjects = projects.filter((p) => {
-      const projectDate = new Date(p.Date || p.StartDate || new Date());
-      return projectDate >= start && projectDate < end;
+      const projectDate = normalizeDate(p.Date || p.StartDate);
+      if (!projectDate) return false; // skip projects without valid date
+
+      const startDate = normalizeDate(start);
+      const endDate = normalizeDate(end);
+
+      return projectDate >= startDate && projectDate < endDate;
     });
 
     const totalAssignedMinutes = visibleProjects.reduce((sum, p) => {
@@ -251,37 +262,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* --- FULL DATA TABLES --- */}
-      <div className="col-span-2">
-        {sheets.map((sheetName) => (
-          <div key={sheetName} className="mb-6 bg-white shadow rounded p-4">
-            <h3 className="text-lg font-semibold mb-2">{sheetName}</h3>
-            {loading ? (
-              <p>{t("loading")}</p>
-            ) : (
-              <table className="w-full border-collapse border text-sm">
-                <thead>
-                  <tr>
-                    {allData[sheetName]?.[0] &&
-                      Object.keys(allData[sheetName][0]).map((h) => (
-                        <th key={h} className="border px-2 py-1 bg-gray-100">{h}</th>
-                      ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {allData[sheetName]?.map((row, i) => (
-                    <tr key={i}>
-                      {Object.values(row).map((val, j) => (
-                        <td key={j} className="border px-2 py-1">{val}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        ))}
-      </div>
+      
     </div>
   );
 };

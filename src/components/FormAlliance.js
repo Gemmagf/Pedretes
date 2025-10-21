@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../context/LanguageContext';
-import { addRow } from '../services/sheetsAPI';
+import { addRow, getSheetData } from '../services/sheetsAPI';
 import { v4 as uuidv4 } from 'uuid';
+import ProjectCard from './ProjectCard';
 
 // Llistats predefinits
 const clientsList = ['Beyer','Peclard','Lohri','Ann Perica','Messerer','Suenos','Meister'];
@@ -15,7 +16,6 @@ const shapes = ['eckig','rund'];
 const FormAlliance = () => {
   const { t } = useTranslation();
 
-  // Estat del formulari
   const [formData, setFormData] = useState({
     stoneSize:'', stoneType:'', material:'', style:'', shape:'',
     timePerStone:'', pricePerStone:'', goldBack:'', clientName:''
@@ -25,13 +25,27 @@ const FormAlliance = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
 
-  // Funció per llegir dades de Google Sheets
+  // --- Funció per llegir dades de Google Sheets ---
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('https://script.google.com/macros/s/AKfycbz5lbz7o3wS0_-C-mIIK-khOivA6F0pmRUUc70xL_z4e3fMrakqnlbTC7ZCfCP1GMwc/exec?sheet=Alliance');
-      const json = await res.json();
-      setData(json);
+      const json = await getSheetData('Alliance_Form');
+
+      // Normalitzar dates i assignar colors
+      const normalizedData = json.map((p) => {
+        const name = p["Projekte Name"] || p.ProjectName || p.Nom || "NoName";
+        const colorHash = Math.abs([...name].reduce((acc, c) => acc + c.charCodeAt(0), 0)) % 360;
+        const color = `hsl(${colorHash}, 70%, 60%)`;
+
+        return {
+          ...p,
+          color,
+          Date: p.Date ? new Date(p.Date) : null,
+          Creació: p['Marca de temps'] ? new Date(p['Marca de temps']) : null
+        };
+      });
+
+      setData(normalizedData);
     } catch (err) {
       console.error('Error carregant dades:', err);
     } finally {
@@ -43,26 +57,24 @@ const FormAlliance = () => {
     fetchData();
   }, []);
 
-  // Actualitza camps del formulari
-  const handleChange = e => setFormData({...formData,[e.target.name]: e.target.value});
+  // --- Formulari ---
+  const handleChange = e => setFormData({...formData,[e.target.name]:e.target.value});
 
-  // Afegeix un client nou si no existeix
   const handleAddClient = () => {
     if(formData.clientName && !clients.includes(formData.clientName)){
       setClients([...clients, formData.clientName]);
     }
   };
 
-  // Enviar formulari
   const handleSubmit = async e => {
     e.preventDefault();
     if (!formData.clientName) return;
     handleAddClient();
 
-    const dataToSend = { ...formData, id: uuidv4(), sheet:'Alliance' };
+    const dataToSend = { ...formData, id: uuidv4(), sheet:'Alliance_Form' };
 
     try {
-      const res = await addRow('Alliance', dataToSend);
+      const res = await addRow('Alliance_Form', dataToSend);
       console.log('Resposta del Web App:', res);
 
       if (res.status === 'success') {
@@ -71,7 +83,6 @@ const FormAlliance = () => {
           stoneSize:'', stoneType:'', material:'', style:'', shape:'',
           timePerStone:'', pricePerStone:'', goldBack:'', clientName:''
         });
-        // refrescar dades de taula
         fetchData();
         setTimeout(() => setSubmitted(false), 3000);
       }
@@ -81,8 +92,9 @@ const FormAlliance = () => {
   };
 
   return (
-    <motion.div className="bg-white/80 p-6 rounded-xl shadow max-w-4xl mx-auto">
+    <motion.div className="bg-white/80 p-6 rounded-xl shadow max-w-5xl mx-auto">
       <h2 className="text-2xl font-semibold mb-4">{t('allianceFormTitle')}</h2>
+
       {/* Formulari */}
       <form onSubmit={handleSubmit} className="space-y-3 mb-6">
         <div>
@@ -148,48 +160,20 @@ const FormAlliance = () => {
         <button type="submit" className="mt-3 px-4 py-2 bg-amber-300 rounded">{t('createProject')}</button>
       </form>
 
-      {/* Feedback */}
       {submitted && <div className="mt-2 text-green-600 font-semibold">{t('projectSaved')}</div>}
 
-      {/* Taula de dades */}
+      {/* Project cards */}
       <h3 className="text-xl font-semibold mb-2">{t('allProjects')}</h3>
       {loading ? (
-        <p>{t('loading') || 'Carregant dades...'}</p>
+        <p>{t('loading')}</p>
+      ) : data.length === 0 ? (
+        <p>{t('noProjects')}</p>
       ) : (
-        <table className="w-full border-collapse border">
-          <thead>
-            <tr>
-              <th className="border px-2 py-1">ID</th>
-              <th className="border px-2 py-1">Steingröße (mm)</th>
-              <th className="border px-2 py-1">Steinart</th>
-              <th className="border px-2 py-1">Material</th>
-              <th className="border px-2 py-1">Stil</th>
-              <th className="border px-2 py-1">Form</th>
-              <th className="border px-2 py-1">Zeit pro Stein (Minuten)</th>
-              <th className="border px-2 py-1">Preis pro Stein (CHF)</th>
-              <th className="border px-2 py-1">Gold zurück (Gramm)</th>
-              <th className="border px-2 py-1">Kunde</th>
-              <th className="border px-2 py-1">Creació</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, idx) => (
-              <tr key={idx}>
-                <td className="border px-2 py-1">{row['ID']}</td>
-                <td className="border px-2 py-1">{row['Steingröße (mm)']}</td>
-                <td className="border px-2 py-1">{row['Steinart']}</td>
-                <td className="border px-2 py-1">{row['Material']}</td>
-                <td className="border px-2 py-1">{row['Stil']}</td>
-                <td className="border px-2 py-1">{row['Form']}</td>
-                <td className="border px-2 py-1">{row['Zeit pro Stein (Minuten)']}</td>
-                <td className="border px-2 py-1">{row['Preis pro Stein (CHF)']}</td>
-                <td className="border px-2 py-1">{row['Gold zurück (Gramm)']}</td>
-                <td className="border px-2 py-1">{row['Kunde']}</td>
-                <td className="border px-2 py-1">{row['Creació']}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="grid gap-4">
+          {data.map((project, idx) => (
+            <ProjectCard key={idx} project={project} color={project.color} />
+          ))}
+        </div>
       )}
     </motion.div>
   );
