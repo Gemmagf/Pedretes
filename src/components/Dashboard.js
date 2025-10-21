@@ -18,13 +18,17 @@ const Dashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [stats, setStats] = useState({});
 
-  // --- Funció per convertir valors en número ---
-  const toNumber = (val) => {
-    if (val === undefined || val === null) return 0;
-    return parseFloat(val.toString().replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
+  // --- Unique color generator for projects ---
+  const getColorForProject = (name) => {
+    const hash = Array.from(name || "default").reduce(
+      (acc, char) => char.charCodeAt(0) + ((acc << 5) - acc),
+      0
+    );
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 60%)`;
   };
 
-  // --- Carrega totes les dades de les fulles ---
+  // --- Load all sheets ---
   useEffect(() => {
     const fetchAllSheets = async () => {
       setLoading(true);
@@ -36,7 +40,6 @@ const Dashboard = () => {
         }
         setAllData(dataObj);
 
-        // Unim totes les dades
         const merged = Object.values(dataObj).flat();
         setProjects(merged);
         calculateStats(merged);
@@ -49,48 +52,60 @@ const Dashboard = () => {
     fetchAllSheets();
   }, []);
 
-  // --- Càlcul de mètriques generals ---
+  // --- Compute stats ---
   const calculateStats = (data) => {
     const total = data.length;
     const completed = data.filter(
       (p) =>
         p.Status?.toLowerCase() === "completat" ||
         p.Status?.toLowerCase() === "completed"
-    ).length;
-    const pending = data.filter(
-      (p) =>
-        p.Status?.toLowerCase() === "pendent" ||
-        p.Status?.toLowerCase() === "pending"
-    ).length;
+    );
+
     const inProgress = data.filter(
       (p) =>
         p.Status?.toLowerCase() === "en marxa" ||
         p.Status?.toLowerCase() === "in_progress"
-    ).length;
+    );
 
-    // --- Càlcul de total revenue ---
-    const totalRevenue = data.reduce((sum, p) => {
-      const price = toNumber(
-        p["Preis pro Stein (chf), Zahl eingeben"] ||
-        p["Preis pro Stein (CHF) Zahl eingeben"] ||
-        p.pricePerStone
-      );
-      const time = toNumber(
-        p["Zeit pro Stein (Minuten), Zahl eingeben in minuten"] ||
-        p["Zeit pro Stein (Minuten) Zahl eingeben in minuten"] ||
-        p.timePerStone
-      );
-      return sum + price * time;
-    }, 0);
+    const pending = data.filter(
+      (p) =>
+        p.Status?.toLowerCase() === "pendent" ||
+        p.Status?.toLowerCase() === "pending"
+    );
 
-    setStats({ total, completed, pending, inProgress, totalRevenue });
+    // --- Project revenue = Preis pro Stein * Zeit pro Stein ---
+    const parseNum = (v) =>
+      isNaN(parseFloat(v)) ? 0 : parseFloat(v.toString().replace(",", "."));
+
+    const projectRevenue = data.map((p) => {
+      const preis = parseNum(p["Preis pro Stein (chf)"] || p.Preu || p.pricePerStone);
+      const zeit = parseNum(p["Zeit pro Stein (Minuten)"] || p.Zeit || p.timePerStone);
+      return preis * zeit;
+    });
+
+    const totalRevenue = projectRevenue.reduce((a, b) => a + b, 0);
+    const completedRevenue = completed
+      .map((p) => {
+        const preis = parseNum(p["Preis pro Stein (chf)"] || p.Preu || p.pricePerStone);
+        const zeit = parseNum(p["Zeit pro Stein (Minuten)"] || p.Zeit || p.timePerStone);
+        return preis * zeit;
+      })
+      .reduce((a, b) => a + b, 0);
+
+    setStats({
+      total,
+      completed: completed.length,
+      inProgress: inProgress.length,
+      pending: pending.length,
+      totalRevenue,
+      completedRevenue,
+    });
   };
 
-  // --- Projectes visibles segons la vista actual ---
+  // --- Filter projects for visible calendar range ---
   const getCurrentProjects = () => {
     const start = selectedDate;
     let end = new Date(start);
-
     switch (view) {
       case "dayGridMonth":
         end.setMonth(start.getMonth() + 1);
@@ -113,22 +128,20 @@ const Dashboard = () => {
 
   const currentProjects = getCurrentProjects();
 
-  // --- Esdeveniments del calendari ---
+  // --- Calendar events ---
   const events = projects.map((p) => {
-    const start = new Date(p.Date || p.StartDate);
+    const title =
+      p["Projekte Name"] || p.Nom || p.ProjectName || "Unbenanntes Projekt";
+    const start = new Date(p.StartDate || p.Date);
     const end = p.EndDate ? new Date(p.EndDate) : start;
+    const color = getColorForProject(title);
+
     return {
-      title: p["Projekte Name"] || p.Nom || p.ProjectName || "No name",
+      title,
       start,
       end,
-      backgroundColor:
-        p.Status?.toLowerCase() === "completat" ||
-        p.Status?.toLowerCase() === "completed"
-          ? "#9ca3af"
-          : p.Status?.toLowerCase() === "en marxa" ||
-            p.Status?.toLowerCase() === "in_progress"
-          ? "#3b82f6"
-          : "#f97316",
+      display: "block",
+      color,
     };
   });
 
@@ -140,15 +153,14 @@ const Dashboard = () => {
         <p className="text-gray-600 mb-4">{t("dashboardSubtitle")}</p>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <p>🧩 {t("totalProjects")}: <span className="font-medium">{stats.total}</span></p>
-          <p>🔧 {t("in_progress")}: <span className="font-medium">{stats.inProgress}</span></p>
-          <p>✅ {t("completed")}: <span className="font-medium">{stats.completed}</span></p>
-          <p>⏳ {t("pending")}: <span className="font-medium">{stats.pending}</span></p>
-
+          <p>🧩 {t("totalProjects")}: {stats.total}</p>
+          <p>🔧 {t("in_progress")}: {stats.inProgress}</p>
+          <p>✅ {t("completed")}: {stats.completed}</p>
+          <p>⏳ {t("pending")}: {stats.pending}</p>
           <p className="col-span-2 border-t pt-2 mt-2 text-sm text-gray-700">
             💰 {t("completedRevenue")}:{" "}
             <span className="font-bold text-green-600">
-              {stats.totalRevenue?.toFixed(2)} CHF
+              {stats.completedRevenue?.toFixed(2)} CHF
             </span>
           </p>
         </div>
@@ -172,61 +184,35 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* --- BOTTOM LEFT: Laufende Projekte --- */}
-      <div className="bg-white rounded-2xl shadow p-4 overflow-y-auto max-h-[70vh]">
+      {/* --- BOTTOM LEFT: Project List (scrollable, same height as calendar) --- */}
+      <div className="bg-white rounded-2xl shadow p-4 overflow-y-auto" style={{ maxHeight: "70vh" }}>
         <h3 className="text-lg font-semibold mb-2">📋 {t("projectsInProgress")}</h3>
         {loading ? (
-          <p className="text-gray-500">{t("loading") || "Carregant dades..."}</p>
+          <p className="text-gray-500">{t("loading")}</p>
         ) : currentProjects.length === 0 ? (
           <p className="text-gray-500">{t("noProjects")}</p>
         ) : (
           <div className="grid gap-3">
             {currentProjects.map((project, i) => (
-              <ProjectCard key={i} project={project} />
+              <ProjectCard
+                key={i}
+                project={project}
+                color={getColorForProject(
+                  project["Projekte Name"] || project.Nom || project.ProjectName
+                )}
+              />
             ))}
           </div>
         )}
       </div>
 
-      {/* --- BOTTOM RIGHT: Revenue --- */}
-      <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between">
+      {/* --- BOTTOM RIGHT: Completed Revenue --- */}
+      <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between" style={{ maxHeight: "70vh" }}>
         <h3 className="text-lg font-semibold mb-2">📈 {t("completedRevenue")}</h3>
         <p className="text-gray-600 mb-4">{t("basedOnCompleted")}</p>
         <div className="text-2xl font-bold text-green-600 mb-2">
-          {stats.totalRevenue?.toFixed(2)} CHF
+          {stats.completedRevenue?.toFixed(2)} CHF
         </div>
-      </div>
-
-      {/* --- FULL DATA TABLES per form --- */}
-      <div className="col-span-2">
-        {sheets.map((sheetName) => (
-          <div key={sheetName} className="mb-6 bg-white shadow rounded p-4">
-            <h3 className="text-lg font-semibold mb-2">{sheetName}</h3>
-            {loading ? (
-              <p>{t("loading")}</p>
-            ) : (
-              <table className="w-full border-collapse border text-sm">
-                <thead>
-                  <tr>
-                    {allData[sheetName]?.[0] &&
-                      Object.keys(allData[sheetName][0]).map((h) => (
-                        <th key={h} className="border px-2 py-1 bg-gray-100">{h}</th>
-                      ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {allData[sheetName]?.map((row, i) => (
-                    <tr key={i}>
-                      {Object.values(row).map((val, j) => (
-                        <td key={j} className="border px-2 py-1">{val}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        ))}
       </div>
     </div>
   );

@@ -5,40 +5,55 @@ const statusColors = {
   "en marxa": "bg-green-500",
   "pendent": "bg-yellow-500",
   "completat": "bg-gray-400",
+  "in_progress": "bg-green-500",
+  "pending": "bg-yellow-500",
+  "completed": "bg-gray-400",
 };
 
-const ProjectCard = ({ project }) => {
+const ProjectCard = ({ project, color }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const toggleExpand = () => setExpanded(!expanded);
 
-  const price = parseFloat(
-    (project["Preis pro Stein (chf), Zahl eingeben"] || project.pricePerStone || "0")
-      .toString()
-      .replace(",", ".")
-      .replace(/[^\d.-]/g, "")
+  // --- Parse numeric fields safely ---
+  const parseNum = (v) => {
+    if (!v) return 0;
+    const clean = v.toString().replace(",", ".").replace(/[^\d.-]/g, "");
+    return isNaN(parseFloat(clean)) ? 0 : parseFloat(clean);
+  };
+
+  const price = parseNum(
+    project["Preis pro Stein (chf), Zahl eingeben"] ||
+      project.pricePerStone ||
+      project["Preis pro Stein (chf)"] ||
+      project.Preu
   );
-  const time = parseFloat(
-    (project["Zeit pro Stein (Minuten), Zahl eingeben in minuten"] || project.timePerStone || "0")
-      .toString()
-      .replace(",", ".")
-      .replace(/[^\d.-]/g, "")
+  const time = parseNum(
+    project["Zeit pro Stein (Minuten), Zahl eingeben in minuten"] ||
+      project.timePerStone ||
+      project["Zeit pro Stein (Minuten)"] ||
+      project.Zeit
   );
 
-  const projectRevenue = isNaN(price) || isNaN(time) ? 0 : price * time;
+  const projectRevenue = price * time;
+
+  const title =
+    project["Projekte Name"] || project.ProjectName || "Sin nom";
+  const status = project.Status?.toLowerCase() || "pendent";
 
   return (
-    <div className="bg-white shadow rounded-2xl p-4 border border-gray-200 hover:shadow-md transition-all">
+    <div
+      className="bg-white shadow rounded-2xl p-4 border border-gray-200 hover:shadow-md transition-all"
+      style={{ borderLeft: `6px solid ${color || "#3b82f6"}` }}
+    >
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div
             className={`w-3 h-3 rounded-full ${
-              statusColors[project.Status?.toLowerCase()] || "bg-blue-400"
+              statusColors[status] || "bg-blue-400"
             }`}
           ></div>
-          <h4 className="text-lg font-semibold text-gray-800">
-            {project["Projekte Name"] || project.ProjectName || "Sin nom"}
-          </h4>
+          <h4 className="text-lg font-semibold text-gray-800">{title}</h4>
         </div>
         <button
           onClick={toggleExpand}
@@ -55,8 +70,9 @@ const ProjectCard = ({ project }) => {
               <strong>{key}:</strong> {value || "—"}
             </p>
           ))}
-          <p>
-            <strong>{t("projectRevenue")}:</strong> {projectRevenue.toFixed(2)} CHF
+          <p className="mt-2 font-medium text-gray-800">
+            💰 <strong>{t("projectRevenue")}:</strong>{" "}
+            {projectRevenue.toFixed(2)} CHF
           </p>
         </div>
       )}
