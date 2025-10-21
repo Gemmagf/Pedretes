@@ -2,40 +2,67 @@
 import React, { useState } from "react";
 import { useTranslation } from "../context/LanguageContext";
 
+const statusColors = {
+  "en marxa": "bg-blue-500",
+  "pendent": "bg-yellow-500",
+  "completat": "bg-gray-400",
+  "completed": "bg-gray-400",
+  "pending": "bg-yellow-500",
+  "in_progress": "bg-blue-500",
+};
+
 const ProjectCard = ({ project }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
+  const toggleExpand = () => setExpanded(!expanded);
+
   return (
-    <div style={{
-      border: "1px solid #ccc",
-      borderRadius: "10px",
-      padding: "10px",
-      backgroundColor: "#fff",
-      boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span>{project.clientName || "Unknown Client"} - {project.stoneType || project.material}</span>
-        <button onClick={() => setExpanded(!expanded)} style={{
-          backgroundColor: "#f0f0f0",
-          borderRadius: "50%",
-          width: "24px",
-          height: "24px",
-          border: "none",
-          cursor: "pointer"
-        }}>{expanded ? "-" : "+"}</button>
+    <div className="bg-white shadow rounded-2xl p-4 border border-gray-200 hover:shadow-md transition-all">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-3 h-3 rounded-full ${
+              statusColors[project.Status?.toLowerCase()] || "bg-blue-400"
+            }`}
+          ></div>
+          <h4 className="text-lg font-semibold text-gray-800">
+            {project.Nom || project.Name || "—"}
+          </h4>
+        </div>
+        <button
+          onClick={toggleExpand}
+          className="text-xl font-bold text-blue-500 hover:text-blue-700"
+        >
+          {expanded ? "−" : "+"}
+        </button>
       </div>
 
+      {/* Expanded content */}
       {expanded && (
-        <div style={{ marginTop: "10px" }}>
-          <p><strong>{t("material")}:</strong> {project.material}</p>
-          <p><strong>Stil:</strong> {project.style}</p>
-          <p><strong>Form:</strong> {project.shape}</p>
-          <p><strong>Zeit pro Stein:</strong> {project.timePerStone} min</p>
-          <p><strong>Preis pro Stein:</strong> CHF {project.pricePerStone}</p>
-          <p><strong>Gold zurück:</strong> {project.goldBack} g</p>
-          <p><strong>Creació:</strong> {project.Creació}</p>
-          {/* Aquí podem afegir futurament un mini formulari per editar */}
+        <div className="mt-3 text-sm text-gray-700 space-y-1">
+          <p>
+            <strong>{t("status")}:</strong> {project.Status || "—"}
+          </p>
+          <p>
+            <strong>{t("startDate")}:</strong> {project.StartDate || "—"}
+          </p>
+          <p>
+            <strong>{t("endDate")}:</strong> {project.EndDate || "—"}
+          </p>
+          <p>
+            <strong>{t("price")}:</strong> {project.Preu || project.Price || "—"} CHF
+          </p>
+          <p>
+            <strong>{t("timePerStone")}:</strong> {project.timePerStone || "—"} min
+          </p>
+          <p>
+            <strong>{t("client")}:</strong> {project.clientName || "—"}
+          </p>
+          <p>
+            <strong>{t("description")}:</strong> {project.Descripcio || project.Description || "—"}
+          </p>
         </div>
       )}
     </div>

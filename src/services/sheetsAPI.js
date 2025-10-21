@@ -1,4 +1,4 @@
-const BASE_URL = "https://script.google.com/macros/s/AKfycbynCcMasb-wHuT8S31YblHMO8jFDb-SSj8ZECXQsY9b0kMtEhSuFhQCONMy6LgfXKc/exec";
+export const BASE_URL = "https://script.google.com/macros/s/AKfycbyp3PfCmhKeK2Qk-5kl5y41793d2Hov5sirpyA3k3Cs9ToyW0U-j62rPlVJ8yLSCjgG/exec";
 
 export const getSheetData = async (sheetName) => {
   const res = await fetch(`${BASE_URL}?sheet=${sheetName}`);
