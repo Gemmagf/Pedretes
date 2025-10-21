@@ -52,6 +52,7 @@ const translations = {
     pricePerStone: "Preis pro Stein (CHF)",
     goldBack: "Gold zurück (Gramm)",
     loading: "Lade Daten...",
+    projectRevenue:"Projektumsatz",
   },
 
   en: {
@@ -103,6 +104,7 @@ const translations = {
     pricePerStone: "Price per Stone (CHF)",
     goldBack: "Gold Back (grams)",
     loading: "Loading data...",
+    projectRevenue:"Project Revenue",
   },
 
   cat: {
@@ -154,6 +156,7 @@ const translations = {
     pricePerStone: "Preu per gemma (CHF)",
     goldBack: "Or recuperat (grams)",
     loading: "Carregant dades...",
+    projectRevenue:"Ingressos del projecte",
   },
 };
 
