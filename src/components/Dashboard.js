@@ -1,3 +1,4 @@
+// src/components/Dashboard.js
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "../context/LanguageContext";
 import FullCalendar from "@fullcalendar/react";
@@ -6,8 +7,13 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import ProjectCard from "./ProjectCard";
 import { getSheetData } from "../services/sheetsAPI";
+import { Pie } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const sheets = ["Pave_Form", "Fassung_Form", "Alliance_Form"];
+const workDayMinutes = 8 * 60; // 8 hours per day
 
 const Dashboard = () => {
   const { t, language } = useTranslation();
@@ -18,17 +24,12 @@ const Dashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [stats, setStats] = useState({});
 
-  // --- Unique color generator for projects ---
-  const getColorForProject = (name) => {
-    const hash = Array.from(name || "default").reduce(
-      (acc, char) => char.charCodeAt(0) + ((acc << 5) - acc),
-      0
-    );
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 70%, 60%)`;
+  const toNumber = (val) => {
+    if (!val) return 0;
+    return parseFloat(val.toString().replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
   };
 
-  // --- Load all sheets ---
+  // --- Load sheets ---
   useEffect(() => {
     const fetchAllSheets = async () => {
       setLoading(true);
@@ -40,7 +41,18 @@ const Dashboard = () => {
         }
         setAllData(dataObj);
 
-        const merged = Object.values(dataObj).flat();
+        // Merge and assign unique color per project
+        const merged = Object.values(dataObj).flat().map((p) => {
+          const colorHash = Math.abs(
+            [...(p["Projekte Name"] || p.ProjectName || p.Nom || "NoName")].reduce(
+              (acc, c) => acc + c.charCodeAt(0),
+              0
+            )
+          ) % 360;
+          const color = `hsl(${colorHash}, 70%, 60%)`;
+          return { ...p, color };
+        });
+
         setProjects(merged);
         calculateStats(merged);
       } catch (err) {
@@ -52,60 +64,47 @@ const Dashboard = () => {
     fetchAllSheets();
   }, []);
 
-  // --- Compute stats ---
+  // --- Calculate stats ---
   const calculateStats = (data) => {
     const total = data.length;
     const completed = data.filter(
       (p) =>
         p.Status?.toLowerCase() === "completat" ||
         p.Status?.toLowerCase() === "completed"
-    );
-
-    const inProgress = data.filter(
-      (p) =>
-        p.Status?.toLowerCase() === "en marxa" ||
-        p.Status?.toLowerCase() === "in_progress"
-    );
-
+    ).length;
     const pending = data.filter(
       (p) =>
         p.Status?.toLowerCase() === "pendent" ||
         p.Status?.toLowerCase() === "pending"
-    );
+    ).length;
+    const inProgress = data.filter(
+      (p) =>
+        p.Status?.toLowerCase() === "en marxa" ||
+        p.Status?.toLowerCase() === "in_progress"
+    ).length;
 
-    // --- Project revenue = Preis pro Stein * Zeit pro Stein ---
-    const parseNum = (v) =>
-      isNaN(parseFloat(v)) ? 0 : parseFloat(v.toString().replace(",", "."));
+    const totalRevenue = data.reduce((sum, p) => {
+      const price = toNumber(
+        p["Preis pro Stein (chf), Zahl eingeben"] ||
+        p["Preis pro Stein (CHF) Zahl eingeben"] ||
+        p.pricePerStone
+      );
+      const time = toNumber(
+        p["Zeit pro Stein (Minuten), Zahl eingeben in minuten"] ||
+        p["Zeit pro Stein (Minuten) Zahl eingeben in minuten"] ||
+        p.timePerStone
+      );
+      return sum + price * time;
+    }, 0);
 
-    const projectRevenue = data.map((p) => {
-      const preis = parseNum(p["Preis pro Stein (chf)"] || p.Preu || p.pricePerStone);
-      const zeit = parseNum(p["Zeit pro Stein (Minuten)"] || p.Zeit || p.timePerStone);
-      return preis * zeit;
-    });
-
-    const totalRevenue = projectRevenue.reduce((a, b) => a + b, 0);
-    const completedRevenue = completed
-      .map((p) => {
-        const preis = parseNum(p["Preis pro Stein (chf)"] || p.Preu || p.pricePerStone);
-        const zeit = parseNum(p["Zeit pro Stein (Minuten)"] || p.Zeit || p.timePerStone);
-        return preis * zeit;
-      })
-      .reduce((a, b) => a + b, 0);
-
-    setStats({
-      total,
-      completed: completed.length,
-      inProgress: inProgress.length,
-      pending: pending.length,
-      totalRevenue,
-      completedRevenue,
-    });
+    setStats({ total, completed, pending, inProgress, totalRevenue });
   };
 
-  // --- Filter projects for visible calendar range ---
+  // --- Projects visible in current calendar view ---
   const getCurrentProjects = () => {
     const start = selectedDate;
     let end = new Date(start);
+
     switch (view) {
       case "dayGridMonth":
         end.setMonth(start.getMonth() + 1);
@@ -120,49 +119,92 @@ const Dashboard = () => {
         end.setMonth(start.getMonth() + 1);
     }
 
-    return projects.filter((p) => {
-      const projectDate = new Date(p.Date || p.StartDate);
+    const visibleProjects = projects.filter((p) => {
+      const projectDate = new Date(p.Date || p.StartDate || new Date());
       return projectDate >= start && projectDate < end;
     });
-  };
 
-  const currentProjects = getCurrentProjects();
+    const totalAssignedMinutes = visibleProjects.reduce((sum, p) => {
+      const minutes = toNumber(
+        p["Zeit pro Stein (Minuten), Zahl eingeben in minuten"] || p.timePerStone
+      );
+      return sum + minutes;
+    }, 0);
+
+    return { visibleProjects, totalAssignedMinutes };
+  };
+  
+  
+  const { visibleProjects, totalAssignedMinutes } = getCurrentProjects();
+
+  const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
+  const freeMinutes = daysInMonth * workDayMinutes - totalAssignedMinutes;
+  const freeHours = Math.max(0, freeMinutes / 60);
 
   // --- Calendar events ---
   const events = projects.map((p) => {
-    const title =
-      p["Projekte Name"] || p.Nom || p.ProjectName || "Unbenanntes Projekt";
-    const start = new Date(p.StartDate || p.Date);
-    const end = p.EndDate ? new Date(p.EndDate) : start;
-    const color = getColorForProject(title);
-
+    const start = new Date(p.Date || p.StartDate || new Date());
+    const minutesPerStone = toNumber(
+      p["Zeit pro Stein (Minuten), Zahl eingeben in minuten"] || p.timePerStone
+    );
+    const durationDays = Math.max(1, Math.ceil(minutesPerStone / workDayMinutes));
     return {
-      title,
+      title: p["Projekte Name"] || p.ProjectName || p.Nom || "No name",
       start,
-      end,
-      display: "block",
-      color,
+      end: new Date(start.getTime() + durationDays * 24 * 60 * 60 * 1000),
+      backgroundColor: p.color,
+      borderColor: p.color,
+      allDay: true,
     };
   });
 
+  // --- Pie chart ---
+  const pieData = {
+    labels: [t("completed"), t("in_progress"), t("pending")],
+    datasets: [
+      {
+        data: [stats.completed, stats.inProgress, stats.pending],
+        backgroundColor: ["#4ade80", "#facc15", "#9ca3af"],
+        borderColor: "#ffffff",
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const pieOptions = {
+    responsive: true,
+    plugins: {
+      legend: { position: "bottom", labels: { color: "#374151", font: { size: 14 } } },
+      tooltip: {
+        callbacks: {
+          label: (context) => `${context.label}: ${context.raw} ${t("projectsInProgress")}`,
+        },
+      },
+    },
+  };
+
   return (
     <div className="p-6 grid grid-cols-2 gap-6">
-      {/* --- TOP LEFT: Stats --- */}
+      {/* --- TOP LEFT: Stats + Pie --- */}
       <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between">
         <h2 className="text-xl font-semibold mb-2">🧭 {t("dashboardTitle")}</h2>
         <p className="text-gray-600 mb-4">{t("dashboardSubtitle")}</p>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <p>🧩 {t("totalProjects")}: {stats.total}</p>
-          <p>🔧 {t("in_progress")}: {stats.inProgress}</p>
-          <p>✅ {t("completed")}: {stats.completed}</p>
-          <p>⏳ {t("pending")}: {stats.pending}</p>
+          <p>🧩 {t("totalProjects", { total: visibleProjects.length })}: <span className="font-medium">{visibleProjects.length}</span></p>
+          <p>🔧 {t("in_progress")}: <span className="font-medium">{stats.inProgress}</span></p>
+          <p>✅ {t("completed")}: <span className="font-medium">{stats.completed}</span></p>
+          <p>⏳ {t("pending")}: <span className="font-medium">{stats.pending}</span></p>
+          <p>🕒 {t("weeklyWorkload")}: <span className="font-medium">{freeHours.toFixed(1)} h</span></p>
           <p className="col-span-2 border-t pt-2 mt-2 text-sm text-gray-700">
-            💰 {t("completedRevenue")}:{" "}
-            <span className="font-bold text-green-600">
-              {stats.completedRevenue?.toFixed(2)} CHF
-            </span>
+            💰 {t("completedRevenue")}: <span className="font-bold text-green-600">{stats.totalRevenue?.toFixed(2)} CHF</span>
           </p>
+        </div>
+
+        {/* --- Pie chart --- */}
+        <div className="mt-4">
+          <h4 className="font-semibold mb-2">📊 {t("dashboard")}</h4>
+          <Pie data={pieData} options={pieOptions} />
         </div>
       </div>
 
@@ -184,35 +226,61 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* --- BOTTOM LEFT: Project List (scrollable, same height as calendar) --- */}
-      <div className="bg-white rounded-2xl shadow p-4 overflow-y-auto" style={{ maxHeight: "70vh" }}>
+      {/* --- BOTTOM LEFT: Project cards --- */}
+      <div className="bg-white rounded-2xl shadow p-4 overflow-y-auto max-h-[70vh]">
         <h3 className="text-lg font-semibold mb-2">📋 {t("projectsInProgress")}</h3>
         {loading ? (
           <p className="text-gray-500">{t("loading")}</p>
-        ) : currentProjects.length === 0 ? (
+        ) : visibleProjects.length === 0 ? (
           <p className="text-gray-500">{t("noProjects")}</p>
         ) : (
           <div className="grid gap-3">
-            {currentProjects.map((project, i) => (
-              <ProjectCard
-                key={i}
-                project={project}
-                color={getColorForProject(
-                  project["Projekte Name"] || project.Nom || project.ProjectName
-                )}
-              />
+            {visibleProjects.map((project, i) => (
+              <ProjectCard key={i} project={project} color={project.color} />
             ))}
           </div>
         )}
       </div>
 
-      {/* --- BOTTOM RIGHT: Completed Revenue --- */}
-      <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between" style={{ maxHeight: "70vh" }}>
+      {/* --- BOTTOM RIGHT: Revenue --- */}
+      <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between">
         <h3 className="text-lg font-semibold mb-2">📈 {t("completedRevenue")}</h3>
         <p className="text-gray-600 mb-4">{t("basedOnCompleted")}</p>
         <div className="text-2xl font-bold text-green-600 mb-2">
-          {stats.completedRevenue?.toFixed(2)} CHF
+          {stats.totalRevenue?.toFixed(2)} CHF
         </div>
+      </div>
+
+      {/* --- FULL DATA TABLES --- */}
+      <div className="col-span-2">
+        {sheets.map((sheetName) => (
+          <div key={sheetName} className="mb-6 bg-white shadow rounded p-4">
+            <h3 className="text-lg font-semibold mb-2">{sheetName}</h3>
+            {loading ? (
+              <p>{t("loading")}</p>
+            ) : (
+              <table className="w-full border-collapse border text-sm">
+                <thead>
+                  <tr>
+                    {allData[sheetName]?.[0] &&
+                      Object.keys(allData[sheetName][0]).map((h) => (
+                        <th key={h} className="border px-2 py-1 bg-gray-100">{h}</th>
+                      ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {allData[sheetName]?.map((row, i) => (
+                    <tr key={i}>
+                      {Object.values(row).map((val, j) => (
+                        <td key={j} className="border px-2 py-1">{val}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

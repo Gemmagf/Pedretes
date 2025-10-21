@@ -99,3 +99,6 @@ function doPost(e) {
   }
 }
 
+
+Questions to sareta:
+- com calcular el revenue? on esta el numero de pedres ?

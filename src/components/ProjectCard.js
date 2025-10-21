@@ -1,15 +1,6 @@
 import React, { useState } from "react";
 import { useTranslation } from "../context/LanguageContext";
 
-const statusColors = {
-  "en marxa": "bg-green-500",
-  "pendent": "bg-yellow-500",
-  "completat": "bg-gray-400",
-  "in_progress": "bg-green-500",
-  "pending": "bg-yellow-500",
-  "completed": "bg-gray-400",
-};
-
 const ProjectCard = ({ project, color }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
@@ -39,19 +30,19 @@ const ProjectCard = ({ project, color }) => {
 
   const title =
     project["Projekte Name"] || project.ProjectName || "Sin nom";
-  const status = project.Status?.toLowerCase() || "pendent";
 
   return (
     <div
       className="bg-white shadow rounded-2xl p-4 border border-gray-200 hover:shadow-md transition-all"
       style={{ borderLeft: `6px solid ${color || "#3b82f6"}` }}
     >
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
+          {/* Dot with project color */}
           <div
-            className={`w-3 h-3 rounded-full ${
-              statusColors[status] || "bg-blue-400"
-            }`}
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: color || "#3b82f6" }}
           ></div>
           <h4 className="text-lg font-semibold text-gray-800">{title}</h4>
         </div>
@@ -63,6 +54,7 @@ const ProjectCard = ({ project, color }) => {
         </button>
       </div>
 
+      {/* Expanded info */}
       {expanded && (
         <div className="mt-3 text-sm text-gray-700 space-y-1">
           {Object.entries(project).map(([key, value]) => (

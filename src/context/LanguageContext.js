@@ -1,3 +1,4 @@
+// src/context/LanguageContext.js
 import React, { createContext, useState, useContext } from "react";
 
 const LanguageContext = createContext();
@@ -38,6 +39,10 @@ const translations = {
     overloadWarning: "Überlastung! Reduziere um {{percent}}% zur Optimierung",
     pendingProjects: "Ausstehende Projekte: {{pending}}",
     totalProjects: "Gesamtprojekte: {{total}}",
+    freeHours: "Freie Stunden",
+    piePending: "Ausstehend",
+    pieInProgress: "In Bearbeitung",
+    pieCompleted: "Abgeschlossen",
     prototypeActive: "Aktiver Prototyp - Alles simuliert",
     allProjects: "Alle Projekte",
     historicalData: "(Historische Daten sichtbar)",
@@ -52,7 +57,7 @@ const translations = {
     pricePerStone: "Preis pro Stein (CHF)",
     goldBack: "Gold zurück (Gramm)",
     loading: "Lade Daten...",
-    projectRevenue:"Projektumsatz",
+    projectRevenue: "Projektumsatz",
   },
 
   en: {
@@ -90,6 +95,10 @@ const translations = {
     overloadWarning: "Overload! Reduce by {{percent}}% to optimize",
     pendingProjects: "Pending projects: {{pending}}",
     totalProjects: "Total projects: {{total}}",
+    freeHours: "Free Hours",
+    piePending: "Pending",
+    pieInProgress: "In Progress",
+    pieCompleted: "Completed",
     prototypeActive: "Active Prototype - All simulated",
     allProjects: "All Projects",
     historicalData: "(Historical data visible)",
@@ -104,7 +113,7 @@ const translations = {
     pricePerStone: "Price per Stone (CHF)",
     goldBack: "Gold Back (grams)",
     loading: "Loading data...",
-    projectRevenue:"Project Revenue",
+    projectRevenue: "Project Revenue",
   },
 
   cat: {
@@ -142,6 +151,10 @@ const translations = {
     overloadWarning: "Sobrecàrrega! Redueix {{percent}}% per optimitzar",
     pendingProjects: "Projectes pendents: {{pending}}",
     totalProjects: "Total projectes: {{total}}",
+    freeHours: "Hores lliures",
+    piePending: "Pendents",
+    pieInProgress: "En Marxa",
+    pieCompleted: "Completats",
     prototypeActive: "Prototip actiu - Tot simulat",
     allProjects: "Tots els projectes",
     historicalData: "(Dades històriques visibles)",
@@ -156,12 +169,12 @@ const translations = {
     pricePerStone: "Preu per gemma (CHF)",
     goldBack: "Or recuperat (grams)",
     loading: "Carregant dades...",
-    projectRevenue:"Ingressos del projecte",
+    projectRevenue: "Ingressos del projecte",
   },
 };
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState("de");
+  const [language, setLanguage] = useState("cat");
 
   const t = (key, vars = {}) => {
     let text = translations[language]?.[key] || key;
