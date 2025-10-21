@@ -1,4 +1,3 @@
-// src/components/Dashboard.js
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "../context/LanguageContext";
 import FullCalendar from "@fullcalendar/react";
@@ -19,7 +18,13 @@ const Dashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [stats, setStats] = useState({});
 
-  // --- Load all sheets ---
+  // --- Funció per convertir valors en número ---
+  const toNumber = (val) => {
+    if (val === undefined || val === null) return 0;
+    return parseFloat(val.toString().replace(",", ".").replace(/[^\d.-]/g, "")) || 0;
+  };
+
+  // --- Carrega totes les dades de les fulles ---
   useEffect(() => {
     const fetchAllSheets = async () => {
       setLoading(true);
@@ -31,7 +36,7 @@ const Dashboard = () => {
         }
         setAllData(dataObj);
 
-        // Unim totes les dades per calcular stats i calendar
+        // Unim totes les dades
         const merged = Object.values(dataObj).flat();
         setProjects(merged);
         calculateStats(merged);
@@ -44,7 +49,7 @@ const Dashboard = () => {
     fetchAllSheets();
   }, []);
 
-  // --- Compute summary stats ---
+  // --- Càlcul de mètriques generals ---
   const calculateStats = (data) => {
     const total = data.length;
     const completed = data.filter(
@@ -62,15 +67,26 @@ const Dashboard = () => {
         p.Status?.toLowerCase() === "en marxa" ||
         p.Status?.toLowerCase() === "in_progress"
     ).length;
-    const totalRevenue = data.reduce(
-      (sum, p) => sum + (parseFloat(p.Preu || p.pricePerStone) || 0),
-      0
-    );
+
+    // --- Càlcul de total revenue ---
+    const totalRevenue = data.reduce((sum, p) => {
+      const price = toNumber(
+        p["Preis pro Stein (chf), Zahl eingeben"] ||
+        p["Preis pro Stein (CHF) Zahl eingeben"] ||
+        p.pricePerStone
+      );
+      const time = toNumber(
+        p["Zeit pro Stein (Minuten), Zahl eingeben in minuten"] ||
+        p["Zeit pro Stein (Minuten) Zahl eingeben in minuten"] ||
+        p.timePerStone
+      );
+      return sum + price * time;
+    }, 0);
 
     setStats({ total, completed, pending, inProgress, totalRevenue });
   };
 
-  // --- Filter projects according to calendar view ---
+  // --- Projectes visibles segons la vista actual ---
   const getCurrentProjects = () => {
     const start = selectedDate;
     let end = new Date(start);
@@ -97,7 +113,7 @@ const Dashboard = () => {
 
   const currentProjects = getCurrentProjects();
 
-  // --- Calendar events ---
+  // --- Esdeveniments del calendari ---
   const events = projects.map((p) => {
     const start = new Date(p.Date || p.StartDate);
     const end = p.EndDate ? new Date(p.EndDate) : start;
@@ -124,21 +140,11 @@ const Dashboard = () => {
         <p className="text-gray-600 mb-4">{t("dashboardSubtitle")}</p>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <p>
-            🧩 {t("totalProjects", { total: stats.total || 0 })}:{" "}
-            <span className="font-medium">{stats.total}</span>
-          </p>
-          <p>
-            🔧 {t("in_progress")}:{" "}
-            <span className="font-medium">{stats.inProgress}</span>
-          </p>
-          <p>
-            ✅ {t("completed")}:{" "}
-            <span className="font-medium">{stats.completed}</span>
-          </p>
-          <p>
-            ⏳ {t("pending")}: <span className="font-medium">{stats.pending}</span>
-          </p>
+          <p>🧩 {t("totalProjects")}: <span className="font-medium">{stats.total}</span></p>
+          <p>🔧 {t("in_progress")}: <span className="font-medium">{stats.inProgress}</span></p>
+          <p>✅ {t("completed")}: <span className="font-medium">{stats.completed}</span></p>
+          <p>⏳ {t("pending")}: <span className="font-medium">{stats.pending}</span></p>
+
           <p className="col-span-2 border-t pt-2 mt-2 text-sm text-gray-700">
             💰 {t("completedRevenue")}:{" "}
             <span className="font-bold text-green-600">
@@ -162,13 +168,12 @@ const Dashboard = () => {
           height="70vh"
           locale={language}
           datesSet={(arg) => setSelectedDate(arg.start)}
-          // Detect view change
           viewDidMount={(arg) => setView(arg.view.type)}
         />
       </div>
 
-      {/* --- BOTTOM LEFT: Project List filtered by calendar --- */}
-      <div className="bg-white rounded-2xl shadow p-4 overflow-y-auto">
+      {/* --- BOTTOM LEFT: Laufende Projekte --- */}
+      <div className="bg-white rounded-2xl shadow p-4 overflow-y-auto max-h-[70vh]">
         <h3 className="text-lg font-semibold mb-2">📋 {t("projectsInProgress")}</h3>
         {loading ? (
           <p className="text-gray-500">{t("loading") || "Carregant dades..."}</p>
@@ -183,8 +188,8 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* --- BOTTOM RIGHT: Revenue / Tips --- */}
-      <div className="bg-white rounded-2xl shadow p-4">
+      {/* --- BOTTOM RIGHT: Revenue --- */}
+      <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between">
         <h3 className="text-lg font-semibold mb-2">📈 {t("completedRevenue")}</h3>
         <p className="text-gray-600 mb-4">{t("basedOnCompleted")}</p>
         <div className="text-2xl font-bold text-green-600 mb-2">
@@ -200,12 +205,12 @@ const Dashboard = () => {
             {loading ? (
               <p>{t("loading")}</p>
             ) : (
-              <table className="w-full border-collapse border">
+              <table className="w-full border-collapse border text-sm">
                 <thead>
                   <tr>
                     {allData[sheetName]?.[0] &&
                       Object.keys(allData[sheetName][0]).map((h) => (
-                        <th key={h} className="border px-2 py-1">{h}</th>
+                        <th key={h} className="border px-2 py-1 bg-gray-100">{h}</th>
                       ))}
                   </tr>
                 </thead>
@@ -228,4 +233,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

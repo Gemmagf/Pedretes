@@ -14,11 +14,24 @@ const ProjectCard = ({ project }) => {
 
   const toggleExpand = () => setExpanded(!expanded);
 
-  // Calcula revenue del projecte
-  const price = parseFloat(project["Preis pro Stein (CHF)"] || project.pricePerStone || 0);
-  const time = parseFloat(project["Zeit pro Stein (Minuten)"] || project.timePerStone || 0);
-  const projectRevenue = price * time;
+  /// --- Calculate project revenue ---
+  // --- Calculate project revenue ---
+    const price = parseFloat(
+    (project["Preis pro Stein (chf), Zahl eingeben"] || project.pricePerStone || "0")
+        .toString()
+        .replace(",", ".")
+        .replace(/[^\d.-]/g, "")
+    );
 
+    const time = parseFloat(
+    (project["Zeit pro Stein (Minuten), Zahl eingeben in minuten"] || project.timePerStone || "0")
+        .toString()
+        .replace(",", ".")
+        .replace(/[^\d.-]/g, "")
+    );
+
+    const projectRevenue = isNaN(price) || isNaN(time) ? 0 : price * time;
+ 
   return (
     <div className="bg-white shadow rounded-2xl p-4 border border-gray-200 hover:shadow-md transition-all">
       {/* Header */}
