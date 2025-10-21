@@ -6,37 +6,42 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import ProjectCard from "./ProjectCard";
+import { getSheetData } from "../services/sheetsAPI";
 
-const BASE_URL = "https://script.google.com/macros/s/AKfycbyp3PfCmhKeK2Qk-5kl5y41793d2Hov5sirpyA3k3Cs9ToyW0U-j62rPlVJ8yLSCjgG/exec";
-
-const getSheetData = async (sheetName) => {
-  const res = await fetch(`${BASE_URL}?sheet=${sheetName}`);
-  return res.json();
-};
+const sheets = ["Pave_Form", "Fassung_Form", "Alliance_Form"];
 
 const Dashboard = () => {
   const { t, language } = useTranslation();
   const [projects, setProjects] = useState([]);
+  const [allData, setAllData] = useState({});
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("dayGridMonth");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [stats, setStats] = useState({});
 
-  // --- Load data from Google Sheets ---
+  // --- Load all sheets ---
   useEffect(() => {
-    const loadData = async () => {
+    const fetchAllSheets = async () => {
       setLoading(true);
       try {
-        const data = await getSheetData("Alliance"); // pots canviar a Pave_Form o Fassung_Form
-        setProjects(data || []);
-        calculateStats(data || []);
+        const dataObj = {};
+        for (let sheetName of sheets) {
+          const data = await getSheetData(sheetName);
+          dataObj[sheetName] = data;
+        }
+        setAllData(dataObj);
+
+        // Unim totes les dades per calcular stats i calendar
+        const merged = Object.values(dataObj).flat();
+        setProjects(merged);
+        calculateStats(merged);
       } catch (err) {
-        console.error("Error loading sheet data:", err);
+        console.error("Error loading sheets:", err);
       } finally {
         setLoading(false);
       }
     };
-    loadData();
+    fetchAllSheets();
   }, []);
 
   // --- Compute summary stats ---
@@ -58,34 +63,61 @@ const Dashboard = () => {
         p.Status?.toLowerCase() === "in_progress"
     ).length;
     const totalRevenue = data.reduce(
-      (sum, p) => sum + (parseFloat(p.Preu || p["Preis pro Stein (CHF)"]) || 0),
+      (sum, p) => sum + (parseFloat(p.Preu || p.pricePerStone) || 0),
       0
     );
 
     setStats({ total, completed, pending, inProgress, totalRevenue });
   };
 
-  // --- Calendar events ---
-  const events = projects.map((p) => ({
-    title: p["Projekte Name"] || p.Nom || p.ProjectName || "No name",
-    start: p.Date || p.StartDate,
-    end: p.EndDate || p.Date,
-    backgroundColor:
-      p.Status?.toLowerCase() === "completat" ||
-      p.Status?.toLowerCase() === "completed"
-        ? "#9ca3af"
-        : p.Status?.toLowerCase() === "en marxa" ||
-          p.Status?.toLowerCase() === "in_progress"
-        ? "#3b82f6"
-        : "#f97316",
-  }));
+  // --- Filter projects according to calendar view ---
+  const getCurrentProjects = () => {
+    const start = selectedDate;
+    let end = new Date(start);
 
-  // --- Filter projects for current month (optional) ---
-  // Si vols mostrar-ho tot, només assigna:
-  const currentProjects = projects; 
+    switch (view) {
+      case "dayGridMonth":
+        end.setMonth(start.getMonth() + 1);
+        break;
+      case "timeGridWeek":
+        end.setDate(start.getDate() + 7);
+        break;
+      case "timeGridDay":
+        end.setDate(start.getDate() + 1);
+        break;
+      default:
+        end.setMonth(start.getMonth() + 1);
+    }
+
+    return projects.filter((p) => {
+      const projectDate = new Date(p.Date || p.StartDate);
+      return projectDate >= start && projectDate < end;
+    });
+  };
+
+  const currentProjects = getCurrentProjects();
+
+  // --- Calendar events ---
+  const events = projects.map((p) => {
+    const start = new Date(p.Date || p.StartDate);
+    const end = p.EndDate ? new Date(p.EndDate) : start;
+    return {
+      title: p["Projekte Name"] || p.Nom || p.ProjectName || "No name",
+      start,
+      end,
+      backgroundColor:
+        p.Status?.toLowerCase() === "completat" ||
+        p.Status?.toLowerCase() === "completed"
+          ? "#9ca3af"
+          : p.Status?.toLowerCase() === "en marxa" ||
+            p.Status?.toLowerCase() === "in_progress"
+          ? "#3b82f6"
+          : "#f97316",
+    };
+  });
 
   return (
-    <div className="p-6 grid grid-cols-2 gap-6 h-[90vh]">
+    <div className="p-6 grid grid-cols-2 gap-6">
       {/* --- TOP LEFT: Stats --- */}
       <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between">
         <h2 className="text-xl font-semibold mb-2">🧭 {t("dashboardTitle")}</h2>
@@ -130,10 +162,12 @@ const Dashboard = () => {
           height="70vh"
           locale={language}
           datesSet={(arg) => setSelectedDate(arg.start)}
+          // Detect view change
+          viewDidMount={(arg) => setView(arg.view.type)}
         />
       </div>
 
-      {/* --- BOTTOM LEFT: Project List --- */}
+      {/* --- BOTTOM LEFT: Project List filtered by calendar --- */}
       <div className="bg-white rounded-2xl shadow p-4 overflow-y-auto">
         <h3 className="text-lg font-semibold mb-2">📋 {t("projectsInProgress")}</h3>
         {loading ? (
@@ -156,15 +190,42 @@ const Dashboard = () => {
         <div className="text-2xl font-bold text-green-600 mb-2">
           {stats.totalRevenue?.toFixed(2)} CHF
         </div>
-        <p className="text-sm text-gray-500 mb-2">{t("optimizationTip")}</p>
-        <ul className="text-sm text-gray-600 list-disc pl-5 space-y-1">
-          <li>⚠️ {t("overloadWarning", { percent: 15 })}</li>
-          <li>💡 {t("pendingProjects", { pending: stats.pending || 0 })}</li>
-          <li>📊 {t("basedOnHistorical", { count: 12 })}</li>
-        </ul>
+      </div>
+
+      {/* --- FULL DATA TABLES per form --- */}
+      <div className="col-span-2">
+        {sheets.map((sheetName) => (
+          <div key={sheetName} className="mb-6 bg-white shadow rounded p-4">
+            <h3 className="text-lg font-semibold mb-2">{sheetName}</h3>
+            {loading ? (
+              <p>{t("loading")}</p>
+            ) : (
+              <table className="w-full border-collapse border">
+                <thead>
+                  <tr>
+                    {allData[sheetName]?.[0] &&
+                      Object.keys(allData[sheetName][0]).map((h) => (
+                        <th key={h} className="border px-2 py-1">{h}</th>
+                      ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {allData[sheetName]?.map((row, i) => (
+                    <tr key={i}>
+                      {Object.values(row).map((val, j) => (
+                        <td key={j} className="border px-2 py-1">{val}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
 export default Dashboard;
+

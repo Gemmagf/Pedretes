@@ -3,12 +3,9 @@ import React, { useState } from "react";
 import { useTranslation } from "../context/LanguageContext";
 
 const statusColors = {
-  "en marxa": "bg-blue-500",
+  "en marxa": "bg-green-500",
   "pendent": "bg-yellow-500",
   "completat": "bg-gray-400",
-  "completed": "bg-gray-400",
-  "pending": "bg-yellow-500",
-  "in_progress": "bg-blue-500",
 };
 
 const ProjectCard = ({ project }) => {
@@ -16,6 +13,11 @@ const ProjectCard = ({ project }) => {
   const [expanded, setExpanded] = useState(false);
 
   const toggleExpand = () => setExpanded(!expanded);
+
+  // Calcula revenue del projecte
+  const price = parseFloat(project["Preis pro Stein (CHF)"] || project.pricePerStone || 0);
+  const time = parseFloat(project["Zeit pro Stein (Minuten)"] || project.timePerStone || 0);
+  const projectRevenue = price * time;
 
   return (
     <div className="bg-white shadow rounded-2xl p-4 border border-gray-200 hover:shadow-md transition-all">
@@ -28,7 +30,7 @@ const ProjectCard = ({ project }) => {
             }`}
           ></div>
           <h4 className="text-lg font-semibold text-gray-800">
-            {project.Nom || project.Name || "—"}
+            {project["Projekte Name"] || project.Nom || project.ProjectName || "Sin nom"}
           </h4>
         </div>
         <button
@@ -39,29 +41,16 @@ const ProjectCard = ({ project }) => {
         </button>
       </div>
 
-      {/* Expanded content */}
+      {/* Expanded info */}
       {expanded && (
         <div className="mt-3 text-sm text-gray-700 space-y-1">
+          {Object.entries(project).map(([key, value]) => (
+            <p key={key}>
+              <strong>{key}:</strong> {value || "—"}
+            </p>
+          ))}
           <p>
-            <strong>{t("status")}:</strong> {project.Status || "—"}
-          </p>
-          <p>
-            <strong>{t("startDate")}:</strong> {project.StartDate || "—"}
-          </p>
-          <p>
-            <strong>{t("endDate")}:</strong> {project.EndDate || "—"}
-          </p>
-          <p>
-            <strong>{t("price")}:</strong> {project.Preu || project.Price || "—"} CHF
-          </p>
-          <p>
-            <strong>{t("timePerStone")}:</strong> {project.timePerStone || "—"} min
-          </p>
-          <p>
-            <strong>{t("client")}:</strong> {project.clientName || "—"}
-          </p>
-          <p>
-            <strong>{t("description")}:</strong> {project.Descripcio || project.Description || "—"}
+            <strong>{t("projectRevenue")}:</strong> {projectRevenue.toFixed(2)} CHF
           </p>
         </div>
       )}
