@@ -1,30 +1,20 @@
-# Pedretes – Prototip Gestió Projectes
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-## Descripció
-Aquest projecte és un prototip per a la gestió de projectes de joieria artesanal.  
-Permet registrar projectes de tres verticals: **Alliance**, **Fassung** i **Pavé**, calcular temps i preus, i visualitzar la planificació.
+# Run and deploy your AI Studio app
 
-### Objectius Fase 1
-- Formularis fàcils i integrats dins l'aplicació.
-- Visualització del flux de treball i calendari de projectes.
-- Càlcul automàtic del temps estimat i preu.
-- Històric inicial de **100 projectes**.
+This contains everything you need to run your app locally.
 
-### Estructura
-- **/src** – codi React de l’aplicació
-- **/components** – components de formularis, dashboard i calendari
-- **/data** – fitxers de prova i configuració (opcional)
-- **README.md** – aquest document
+View your app in AI Studio: https://ai.studio/apps/drive/1wG16ZB7iQ0iB5C7LMQESZbLK-BShcYaR
 
-### Funcionalitats
-1. Pantalla de llista de projectes.
-2. Formularis per cada vertical amb camps desplegables i entrada directa.
-3. Càlcul automàtic de preu i temps estimat.
-4. Calendari bàsic de planificació.
+## Run Locally
 
-### Tecnologies Recomanades
-- React (CRA o Vite)
-- Material UI / Tailwind per estil
-- Google Sheets API per emmagatzematge automàtic
-- Axios / fetch per fer les peticions a Google Sheets
+**Prerequisites:**  Node.js
 
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
