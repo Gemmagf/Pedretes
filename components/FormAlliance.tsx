@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../context/LanguageContext';
@@ -259,6 +258,7 @@ const FormAlliance = () => {
         </motion.div>
       </div>
 
+      {/* Tots els Projectes */}
       <div className="space-y-4 pt-8">
         <h3 className="text-2xl font-serif font-bold text-jewelry-copper flex items-center gap-3">
           <div className="h-px bg-jewelry-gold/30 flex-1"></div>
