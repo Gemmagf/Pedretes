@@ -1,33 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../context/LanguageContext';
+import { useUsers } from '../context/UsersContext';
 import { addRow, getSheetData } from '../services/sheetsAPI';
 import ProjectCard from './ProjectCard';
 import { Project } from '../types';
+import { Calculator, Calendar, TrendingUp, DollarSign } from 'lucide-react';
 
-const clientsList = ['Beyer','Ann Perica','Messerer'];
+// Llistes específiques de Pavé
+const clientsList = ['Beyer','Peclard','Lohri','Ann Perica','Messerer','Suenos','Meister'];
+const stoneTypes = ['weiße Diamanten','Korund + farbige Diamanten','empfindliche Steine'];
 const materials = ['WG + GG + Roségold','Rotgold','Platin'];
-const stoneTypes = ['weiße Diamanten','Korund + farbige Diamanten'];
-const styles = ['wildes Pavé, Honeycomb','Fadenpavé','Castle'];
-const layouts = ['nicht vorhanden', 'vorhanden'];
-const fixations = ['einfache Fixierung', 'doppelte Fixierung'];
+const pavéStyles = ['wildes Pavé','Fadenpavé','Fadenpavé verlauf','Arkade','Fishtail','Fishtail gegenschnitt','Abgedeckt','Castel','Side by side','Kanalfassung'];
+const layouts = ['Lineal','Kreis','Rechteck','Oval','Freiform'];
+const fixations = ['einfache Fixierung','komplexe Fixierung'];
 
 const FormPave = () => {
   const { t } = useTranslation();
+  const { users } = useUsers();
   const [formData, setFormData] = useState({
     projectName: '',
     stoneType: '',
     material: '',
     style: '',
     layout: '',
-    fixation: '',
+    fixierung: '',
     pricePerStone: '',
     totalTime: '',
-    goldWeight: '',
+    goldBack: '',
     client: '',
     stoneCount: '',
-    agreedPrice: '',
-    deadline: ''
+    date: '',
+    assignedTo: '',
+    agreedPrice: ''
   });
 
   const [simulation, setSimulation] = useState({
@@ -55,13 +60,13 @@ const FormPave = () => {
   };
 
   const handleSimulate = () => {
-    const baseTime = Number(formData.totalTime) || 0;
-    const hourlyRate = 120;
-    let price = (baseTime / 60) * hourlyRate * simulation.difficultyMargin;
+    const baseTime = (Number(formData.totalTime) || 0);
+    let price = (Number(formData.pricePerStone) || 0) * (Number(formData.stoneCount) || 0);
+    price *= simulation.difficultyMargin;
     price += Number(simulation.urgencyFee);
 
     const today = new Date();
-    const daysToAdd = Math.ceil(baseTime / 60 / 8);
+    const daysToAdd = Math.ceil(baseTime / 480); // 8h workday = 480 min
     const suggested = new Date(today.setDate(today.getDate() + daysToAdd + 2));
 
     setSimulation(prev => ({
@@ -73,100 +78,198 @@ const FormPave = () => {
     setFormData(prev => ({
       ...prev,
       agreedPrice: Math.round(price).toString(),
-      deadline: suggested.toISOString().split('T')[0]
+      date: suggested.toISOString().split('T')[0]
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+
     await addRow('Pave_Form', {
       ...formData,
-      stoneCount: Number(formData.stoneCount),
-      totalTime: Number(formData.totalTime),
+      timestamp: new Date().toISOString(),
       pricePerStone: Number(formData.pricePerStone),
-      goldWeight: Number(formData.goldWeight),
+      totalTime: Number(formData.totalTime),
+      goldBack: Number(formData.goldBack),
+      stoneCount: Number(formData.stoneCount),
+      agreedPrice: Number(formData.agreedPrice)
     });
+
     setFormData({
-      projectName: '', stoneType: '', material: '', style: '', layout: '', fixation: '',
-      pricePerStone: '', totalTime: '', goldWeight: '', client: '', stoneCount: '', agreedPrice: '', deadline: ''
+      projectName: '', stoneType: '', material: '', style: '', layout: '',
+      fixierung: '', pricePerStone: '', totalTime: '', goldBack: '',
+      client: '', stoneCount: '', date: '', assignedTo: '', agreedPrice: ''
     });
-    setSimulation({ difficultyMargin: 1.0, urgencyFee: 0, calculatedPrice: 0, suggestedDate: '' });
+    setSimulation({ difficultyMargin: 1, urgencyFee: 0, calculatedPrice: 0, suggestedDate: '' });
+
     await refreshData();
     setSubmitting(false);
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
-        <div className="bg-purple-50 px-6 py-4 border-b border-purple-100">
-          <h2 className="text-xl font-serif font-bold text-purple-900">{t('paveFormTitle')}</h2>
-        </div>
+    <div className="max-w-6xl mx-auto space-y-8 pb-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="col-span-full">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectName')}</label>
-            <input name="projectName" value={formData.projectName} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none" required />
+        {/* Form Principal */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="lg:col-span-2 bg-white rounded-2xl shadow-lg border border-amber-100 overflow-hidden"
+        >
+          <div className="bg-amber-50 px-6 py-4 border-b border-amber-100 flex items-center justify-between">
+            <h2 className="text-xl font-serif font-bold text-jewelry-copper">{t('paveFormTitle')}</h2>
+            <div className="w-2 h-2 rounded-full bg-jewelry-gold"></div>
           </div>
 
-          {[
-            { name: 'client', label: t('client'), type: 'select', opts: clientsList },
-            { name: 'stoneType', label: t('stoneType'), type: 'select', opts: stoneTypes },
-            { name: 'material', label: t('material'), type: 'select', opts: materials },
-            { name: 'style', label: t('style'), type: 'select', opts: styles },
-            { name: 'layout', label: t('layout'), type: 'select', opts: layouts },
-            { name: 'fixation', label: t('fixation'), type: 'select', opts: fixations },
-            { name: 'stoneCount', label: t('stoneCount'), type: 'number' },
-            { name: 'totalTime', label: t('totalTime'), type: 'number' },
-            { name: 'pricePerStone', label: t('pricePerStone'), type: 'number' },
-            { name: 'goldWeight', label: t('goldBack'), type: 'number', step: '0.1' },
-          ].map((field) => (
-            <div key={field.name}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
-              {field.type === 'select' ? (
-                <select name={field.name} value={(formData as any)[field.name]} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-purple-400 outline-none" required>
-                  <option value="">Select...</option>
-                  {field.opts?.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input type={field.type} step={field.step} name={field.name} value={(formData as any)[field.name]} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 outline-none" required />
-              )}
+          <form id="paveForm" onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="col-span-full">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectName')}</label>
+              <input name="projectName" value={formData.projectName} onChange={handleChange} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-jewelry-gold focus:bg-white outline-none transition" required />
             </div>
-          ))}
 
-          {/* Simulador */}
-          <div className="col-span-full p-4 bg-purple-50 rounded-xl border border-purple-100 space-y-3">
-            <h3 className="text-xs font-bold uppercase text-purple-900">{t('proposalSimulation')}</h3>
-            <p className="text-xs text-gray-500">AI-assisted scheduling and pricing estimator.</p>
+            {[
+              { name: 'client', label: t('client'), type: 'select', opts: clientsList },
+              { name: 'assignedTo', label: t('assignedTo'), type: 'select', opts: users.map(u => ({ val: u.id, text: u.name })) },
+              { name: 'stoneType', label: t('stoneType'), type: 'select', opts: stoneTypes },
+              { name: 'material', label: t('material'), type: 'select', opts: materials },
+              { name: 'style', label: t('style'), type: 'select', opts: pavéStyles },
+              { name: 'layout', label: t('layout'), type: 'select', opts: layouts },
+              { name: 'fixierung', label: t('fixierung'), type: 'select', opts: fixations },
+              { name: 'stoneCount', label: t('stoneCount'), type: 'number' },
+              { name: 'totalTime', label: t('totalTime'), type: 'number' },
+              { name: 'pricePerStone', label: t('pricePerStone'), type: 'number' },
+              { name: 'goldBack', label: t('goldBack'), type: 'number', step:'0.1' },
+            ].map((field) => (
+              <div key={field.name}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+                {field.type === 'select' ? (
+                  <select name={field.name} value={(formData as any)[field.name]} onChange={handleChange} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-jewelry-gold focus:bg-white outline-none transition cursor-pointer">
+                    <option value="">Select...</option>
+                    {field.opts?.map(o => (
+                      typeof o === 'string'
+                        ? <option key={o} value={o}>{o}</option>
+                        : <option key={o.val} value={o.val}>{o.text}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input type={field.type} step={field.step} name={field.name} value={(formData as any)[field.name]} onChange={handleChange} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-jewelry-gold focus:bg-white outline-none transition" />
+                )}
+              </div>
+            ))}
+          </form>
+        </motion.div>
 
-            <label className="text-xs font-bold text-gray-600">Difficulty Margin</label>
-            <input type="range" min="1" max="2" step="0.1" value={simulation.difficultyMargin} onChange={e => setSimulation({...simulation, difficultyMargin: parseFloat(e.target.value)})} className="w-full h-2 mt-1 accent-purple-600" />
+        {/* Simulator */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col border border-jewelry-gold/30"
+        >
+          <div className="p-6 border-b border-amber-100 bg-gradient-to-r from-amber-50 to-white">
+            <div className="flex items-center gap-2 text-jewelry-copper mb-1">
+              <Calculator className="w-5 h-5" />
+              <h3 className="font-serif font-bold uppercase tracking-wide text-sm">{t('proposalSimulation')}</h3>
+            </div>
+            <p className="text-gray-500 text-xs">AI-assisted scheduling and pricing estimator.</p>
+          </div>
 
-            <label className="text-xs font-bold text-gray-600">Urgency Fee (CHF)</label>
-            <input type="number" value={simulation.urgencyFee} onChange={e => setSimulation({...simulation, urgencyFee: parseInt(e.target.value) || 0})} className="w-full p-2 border rounded-lg mt-1" />
+          <div className="p-6 space-y-6 flex-1 bg-white">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-xs uppercase text-gray-600 font-bold">{t('difficultyMargin')}</label>
+                <span className="text-xs font-mono font-bold text-jewelry-bronze">x{simulation.difficultyMargin}</span>
+              </div>
+              <input 
+                type="range" min="1" max="2" step="0.1" 
+                value={simulation.difficultyMargin}
+                onChange={e => setSimulation({...simulation, difficultyMargin: parseFloat(e.target.value)})}
+                className="w-full h-2 bg-amber-100 rounded-lg appearance-none cursor-pointer accent-jewelry-gold"
+              />
+            </div>
 
-            <button type="button" onClick={handleSimulate} className="w-full py-2 bg-purple-600 text-white rounded-lg font-bold mt-2">Calculate</button>
+            <div>
+              <label className="block text-xs uppercase text-gray-600 font-bold mb-2">{t('urgencyFee')} (CHF)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">CHF</span>
+                <input 
+                  type="number" 
+                  value={simulation.urgencyFee}
+                  onChange={e => setSimulation({...simulation, urgencyFee: parseInt(e.target.value) || 0})}
+                  className="w-full pl-9 p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 font-medium focus:ring-2 focus:ring-jewelry-copper outline-none transition"
+                />
+              </div>
+            </div>
+
+            <button 
+              type="button"
+              onClick={handleSimulate}
+              className="w-full py-3 bg-gradient-to-r from-jewelry-gold to-jewelry-copper text-white rounded-lg font-bold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5"
+            >
+              <TrendingUp className="w-4 h-4" />
+              {t('calculate')}
+            </button>
 
             {simulation.calculatedPrice > 0 && (
-              <div className="space-y-1 text-xs text-purple-700">
-                <div>Suggested Price: {simulation.calculatedPrice} CHF</div>
-                <div>Suggested Date: {simulation.suggestedDate}</div>
+              <div className="space-y-3 pt-2 animate-fade-in-up">
+                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-center justify-between">
+                  <div className="text-xs text-jewelry-bronze uppercase font-bold">{t('suggestedPrice')}</div>
+                  <div className="text-xl font-serif text-jewelry-copper font-bold">{simulation.calculatedPrice} <span className="text-sm">CHF</span></div>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center justify-between">
+                  <div className="text-xs text-blue-800 uppercase font-bold">{t('suggestedDate')}</div>
+                  <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
+                    <Calendar className="w-4 h-4 text-blue-500" />
+                    {simulation.suggestedDate}
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
-          <div className="col-span-full flex justify-end mt-4">
-             <button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-2 rounded-lg font-medium shadow-md transition-colors" disabled={submitting}>{submitting ? t('loading') : t('submit')}</button>
+          <div className="p-6 bg-amber-50/50 border-t border-amber-100">
+            <label className="block text-xs uppercase text-gray-500 font-bold mb-2">{t('agreedPrice')} (Final)</label>
+            <div className="relative mb-4">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-jewelry-copper font-serif font-bold">CHF</span>
+              <input 
+                name="agreedPrice"
+                value={formData.agreedPrice}
+                onChange={handleChange}
+                className="w-full pl-12 p-3 bg-white border border-jewelry-gold/30 rounded-lg text-xl font-serif font-bold text-gray-800 shadow-sm focus:ring-2 focus:ring-jewelry-gold outline-none"
+                placeholder="0.00"
+              />
+            </div>
+            <button 
+              form="paveForm"
+              type="submit" 
+              disabled={submitting} 
+              className="w-full bg-jewelry-copper hover:bg-jewelry-bronze text-white py-3 rounded-lg font-bold shadow-lg transition disabled:opacity-50 flex justify-center"
+            >
+              {submitting ? t('loading') : t('submit')}
+            </button>
           </div>
+        </motion.div>
+      </div>
 
-        </form>
-      </motion.div>
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-serif font-bold text-gray-800 border-b pb-2">{t('allProjects')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {loading ? <div>{t('loading')}</div> : data.map(p => <ProjectCard key={p.id} project={p} color="#9333ea" />)}
-        </div>
+      {/* Projectes existents */}
+      <div className="space-y-4 pt-8">
+        <h3 className="text-2xl font-serif font-bold text-jewelry-copper flex items-center gap-3">
+          <div className="h-px bg-jewelry-gold/30 flex-1"></div>
+          {t('allProjects')}
+          <div className="h-px bg-jewelry-gold/30 flex-1"></div>
+        </h3>
+        
+        {loading ? (
+          <div className="flex justify-center py-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-jewelry-gold"></div>
+          </div>
+        ) : data.length === 0 ? (
+          <div className="text-center text-gray-400 italic py-10">{t('noProjects')}</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.map(p => <ProjectCard key={p.id} project={p} color="#b87333" />)}
+          </div>
+        )}
       </div>
     </div>
   );

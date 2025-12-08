@@ -198,7 +198,7 @@ const FormAlliance = () => {
              <div>
                <label className="block text-xs uppercase text-gray-600 font-bold mb-2">{t('urgencyFee')} (CHF)</label>
                <div className="relative">
-                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">CHF</span>
                  <input 
                    type="number" 
                    value={simulation.urgencyFee}

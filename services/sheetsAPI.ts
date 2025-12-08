@@ -148,44 +148,93 @@ const mockData: Project[] = [
 
 let runtimeData = [...mockData];
 
-export const getSheetData = async (sheetName: string): Promise<Project[]> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 600));
-  
-  if (sheetName === 'All') return runtimeData;
-  
-  const typeMap: Record<string, string> = {
-    'Alliance_Form': 'Alliance',
-    'Fassung_Form': 'Fassung',
-    'Pave_Form': 'Pave'
-  };
-  
-  const targetType = typeMap[sheetName] || sheetName;
-  return runtimeData.filter(p => p.sheetType === targetType);
+// URL OF YOUR WEB APP (NEW DEPLOY)
+const API_URL = "https://script.google.com/macros/s/AKfycby4-Ev-kQPuQqPBmrhr3rrGzJEioBOBakestRbU2kfFAtyjG0dV0trPjnk_gMYcDW0aeA/exec";
+
+// Map sheet names used by UI → real sheets in Google Sheets
+const sheetMap: Record<string, string> = {
+  All: "All",
+  Alliance_Form: "Alliance",
+  Fassung_Form: "Fassung",
+  Pave_Form: "Pave"
 };
 
-export const addRow = async (sheetName: string, data: any): Promise<{ status: string; message: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  const typeMap: Record<string, 'Alliance' | 'Fassung' | 'Pave'> = {
-    'Alliance_Form': 'Alliance',
-    'Fassung_Form': 'Fassung',
-    'Pave_Form': 'Pave'
-  };
+export const getSheetData = async (sheetName: string): Promise<Project[]> => {
+  const targetSheet = sheetMap[sheetName] || sheetName;
 
+  try {
+    const url = `${API_URL}?sheet=${encodeURIComponent(targetSheet)}`;
+    const response = await fetch(url);
+
+    if (!response.ok) throw new Error("HTTP error: " + response.status);
+
+    const data = await response.json();
+
+    if (!Array.isArray(data)) throw new Error("Bad API response");
+
+    // Update runtimeData only for that sheet type
+    runtimeData = runtimeData.filter(p => p.sheetType !== targetSheet);
+    const converted = data.map(d => ({
+      ...d,
+      sheetType: targetSheet
+    }));
+
+    runtimeData = [...converted, ...runtimeData];
+
+    return converted;
+
+  } catch (err) {
+    console.warn("⚠️ API FAILED → USING MOCK DATA", err);
+
+    if (sheetName === "All") return runtimeData;
+
+    return runtimeData.filter(p => p.sheetType === targetSheet);
+  }
+};
+
+export const addRow = async (sheetName: string, data: any) => {
+  const targetSheet = sheetMap[sheetName] || sheetName;
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ sheet: targetSheet, ...data }),
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const res = await response.json();
+
+    if (res.status !== "success") throw new Error(res.message);
+
+  } catch (err) {
+    console.warn("⚠️ ADD FAILED → ADDING TO MOCK", err);
+  }
+
+  // ALWAYS update local runtime data so app continues working
   const newProject: Project = {
     ...data,
-    id: Math.random().toString(36).substr(2, 9),
-    sheetType: typeMap[sheetName] || 'Alliance',
-    date: data.date || new Date().toISOString().split('T')[0],
-    status: 'Pending'
+    id: Math.random().toString(36).slice(2),
+    sheetType: targetSheet,
+    status: "Pending",
+    date: data.date || new Date().toISOString().split("T")[0]
   };
 
   runtimeData.unshift(newProject);
-  return { status: 'success', message: 'Row added successfully' };
+
+  return { status: "success", message: "Row added (API or fallback)" };
 };
 
-export const updateRow = async (project: Project): Promise<void> => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  runtimeData = runtimeData.map(p => p.id === project.id ? project : p);
+export const updateRow = async (project: Project) => {
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ sheet: project.sheetType, ...project }),
+      headers: { "Content-Type": "application/json" }
+    });
+
+  } catch (err) {
+    console.warn("⚠️ UPDATE FAILED → USING LOCAL ONLY");
+  }
+
+  runtimeData = runtimeData.map(p => (p.id === project.id ? project : p));
 };

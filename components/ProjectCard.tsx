@@ -47,7 +47,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, color }) => {
           
           {(project.pricePerStone || 0) > 0 && (
             <div className="flex items-center gap-1.5">
-              <DollarSign className="w-4 h-4 text-emerald-500" />
+              <span className="text-emerald-500 font-medium text-sm">CHF</span>
               <span>{project.pricePerStone} CHF</span>
             </div>
           )}
