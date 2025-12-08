@@ -31,7 +31,7 @@ const ProjectDetailModal = ({ project, onClose, onUpdate }: { project: Project, 
   const [edited, setEdited] = useState({ ...project });
 
   const handleSave = async () => {
-    await updateRow(edited);
+    await updateRow(edited.sheet as any, edited); // <-- fulla + dades
     onUpdate(edited);
     onClose();
   };
@@ -280,21 +280,31 @@ const Dashboard = () => {
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  const refreshData = async () => {
-    setLoading(true);
-    const data = await getSheetData('All');
-    // Color logic using gold hues
-    const processed = data.map(p => {
-      const hash = [...(p.projectName || '')].reduce((acc, c) => acc + c.charCodeAt(0), 0);
-      // Generate varying warm colors: Hue between 20 (orange) and 45 (gold), Saturation 70-90%, Lightness 45-60%
-      const hue = 25 + (hash % 25); 
-      const sat = 70 + (hash % 20);
-      const light = 45 + (hash % 15);
-      return { ...p, color: `hsl(${hue}, ${sat}%, ${light}%)` };
-    });
-    setProjects(processed);
-    setLoading(false);
-  };
+  // Tipus literal per a les fulles disponibles
+type SheetName = 'Pave_Form' | 'Alliance_Form' | 'Fassung_Form';
+
+const refreshData = async () => {
+  setLoading(true);
+
+  // Llista de fulles literals
+  const sheets: SheetName[] = ['Pave_Form','Alliance_Form','Fassung_Form'];
+
+  // Obtenir dades de totes les fulles
+  const allDataArrays = await Promise.all(sheets.map(s => getSheetData(s))); 
+  const data = allDataArrays.flat(); // combinar totes les fulles
+
+  // Afegir colors basats en projectName
+  const processed = data.map(p => {
+    const hash = [...(p.projectName || '')].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    const hue = 25 + (hash % 25);
+    const sat = 70 + (hash % 20);
+    const light = 45 + (hash % 15);
+    return { ...p, color: `hsl(${hue}, ${sat}%, ${light}%)` };
+  });
+
+  setProjects(processed);
+  setLoading(false);
+};
 
   useEffect(() => { refreshData(); }, []);
 
