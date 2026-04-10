@@ -6,6 +6,7 @@ import FormAlliance from './components/FormAlliance';
 import FormFassung from './components/FormFassung';
 import FormPave from './components/FormPave';
 import UserManagement from './components/UserManagement';
+import Analytics from './components/Analytics';
 import { LanguageProvider, useTranslation } from './context/LanguageContext';
 import { UsersProvider } from './context/UsersContext';
 import { Globe } from 'lucide-react';
@@ -18,12 +19,13 @@ const LanguageSelector = () => {
       <select
         value={language}
         onChange={(e) => setLanguage(e.target.value as any)}
-        className="bg-transparent text-sm font-medium text-gray-600 outline-none cursor-pointer"
+        className="w-full pl-10 pr-8 py-2.5 bg-white border border-jewelry-gold/30 rounded-xl text-sm font-semibold text-gray-700 focus:ring-2 focus:ring-jewelry-gold outline-none appearance-none cursor-pointer hover:border-jewelry-gold transition-colors shadow-sm"
       >
         <option value="de">Deutsch</option>
         <option value="en">English</option>
         <option value="cat">Català</option>
       </select>
+      
     </div>
   );
 };
@@ -49,6 +51,7 @@ const AppContent = () => {
         <div className="animate-fade-in-up">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/alliance" element={<FormAlliance />} />
             <Route path="/fassung" element={<FormFassung />} />
             <Route path="/pave" element={<FormPave />} />

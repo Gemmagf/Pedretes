@@ -1,37 +1,45 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
+import {
+  getUsers,
+  addUser as addUserDB,
+  updateUserHours as updateUserHoursDB,
+  updateUserAvailability as updateUserAvailabilityDB,
+} from '../services/supabase';
 
 interface UsersContextType {
   users: User[];
   addUser: (name: string) => void;
   updateUserHours: (id: string, hours: number) => void;
+  updateUserAvailability: (id: string, workingDays: number[], daysOff: string[]) => void;
 }
 
 const UsersContext = createContext<UsersContextType | undefined>(undefined);
 
 export const UsersProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>([
-    { id: '1', name: 'Jordi', baseHours: 40, extraHours: 0 },
-    { id: '2', name: 'Maria', baseHours: 35, extraHours: 2 },
-    { id: '3', name: 'Hans', baseHours: 42, extraHours: 5 },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
 
-  const addUser = (name: string) => {
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      name,
-      baseHours: 40,
-      extraHours: 0
-    };
-    setUsers([...users, newUser]);
+  useEffect(() => {
+    getUsers().then(setUsers);
+  }, []);
+
+  const addUser = async (name: string) => {
+    const newUser = await addUserDB(name);
+    if (newUser) setUsers(prev => [...prev, newUser]);
   };
 
-  const updateUserHours = (id: string, hours: number) => {
-    setUsers(users.map(u => u.id === id ? { ...u, extraHours: hours } : u));
+  const updateUserHours = async (id: string, hours: number) => {
+    await updateUserHoursDB(id, hours);
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, extraHours: hours } : u));
+  };
+
+  const updateUserAvailability = async (id: string, workingDays: number[], daysOff: string[]) => {
+    await updateUserAvailabilityDB(id, workingDays, daysOff);
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, workingDays, daysOff } : u));
   };
 
   return (
-    <UsersContext.Provider value={{ users, addUser, updateUserHours }}>
+    <UsersContext.Provider value={{ users, addUser, updateUserHours, updateUserAvailability }}>
       {children}
     </UsersContext.Provider>
   );

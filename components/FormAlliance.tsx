@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../context/LanguageContext';
 import { useUsers } from '../context/UsersContext';
-import { addRow, getSheetData } from '../services/sheetsAPI';
+import { addProject, getProjects } from '../services/supabase';
 import ProjectCard from './ProjectCard';
 import { Project } from '../types';
 import { Calculator, Calendar, TrendingUp } from 'lucide-react';
+import SmartPrediction from './SmartPrediction';
 
 const clientsList = ['Beyer','Peclard','Lohri','Ann Perica','Messerer','Suenos','Meister'];
 const stoneTypes = ['weiße Diamanten','Korund + farbige Diamanten','empfindliche Steine'];
@@ -47,14 +48,9 @@ const FormAlliance = () => {
 
   const refreshData = async () => {
     setLoading(true);
-    try {
-      const res = await getSheetData('Alliance_Form');
-      setData(res);
-    } catch(err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    const res = await getProjects('Alliance');
+    setData(res);
+    setLoading(false);
   };
 
   useEffect(() => { refreshData(); }, []);
@@ -105,9 +101,12 @@ const FormAlliance = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    await addRow('Alliance_Form', {
+    await addProject({
       ...formData,
+      sheetType: 'Alliance',
       projectName: formData.projectName || `Project ${new Date().toLocaleTimeString()}`,
+      date: new Date().toISOString(),
+      status: 'Pending',
       stoneSize: Number(formData.stoneSize),
       timePerStone: Number(formData.timePerStone),
       pricePerStone: Number(formData.pricePerStone),
@@ -203,6 +202,15 @@ const FormAlliance = () => {
                 <input type="number" value={simulation.urgencyFee} onChange={e => setSimulation({...simulation, urgencyFee: parseInt(e.target.value) || 0})} className="w-full pl-9 p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 font-medium focus:ring-2 focus:ring-jewelry-copper outline-none transition" />
               </div>
             </div>
+
+            <SmartPrediction
+              projectType="Alliance"
+              style={formData.style}
+              material={formData.material}
+              stoneType={formData.stoneType}
+              shape={formData.shape}
+              goldWeight={Number(formData.goldWeight) || undefined}
+            />
 
             <button type="button" onClick={handleSimulate} className="w-full py-3 bg-gradient-to-r from-jewelry-gold to-jewelry-copper text-white rounded-lg font-bold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5">
               <TrendingUp className="w-4 h-4" />

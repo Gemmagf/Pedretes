@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../context/LanguageContext';
 import { useUsers } from '../context/UsersContext';
-import { addRow, getSheetData } from '../services/sheetsAPI';
+import { addProject, getProjects } from '../services/supabase';
 import ProjectCard from './ProjectCard';
 import { Project } from '../types';
 import { Calculator, Calendar, TrendingUp, DollarSign } from 'lucide-react';
+import SmartPrediction from './SmartPrediction';
 
 // Llistes específiques de Pavé
 const clientsList = ['Beyer','Peclard','Lohri','Ann Perica','Messerer','Suenos','Meister'];
@@ -48,7 +49,7 @@ const FormPave = () => {
 
   const refreshData = async () => {
     setLoading(true);
-    const res = await getSheetData('Pave_Form');
+    const res = await getProjects('Pave');
     setData(res);
     setLoading(false);
   };
@@ -86,14 +87,17 @@ const FormPave = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    await addRow('Pave_Form', {
+    await addProject({
       ...formData,
-      timestamp: new Date().toISOString(),
+      sheetType: 'Pave',
+      date: new Date().toISOString(),
+      status: 'Pending',
       pricePerStone: Number(formData.pricePerStone),
       totalTime: Number(formData.totalTime),
-      goldBack: Number(formData.goldBack),
+      goldWeight: Number(formData.goldBack),
       stoneCount: Number(formData.stoneCount),
-      agreedPrice: Number(formData.agreedPrice)
+      agreedPrice: Number(formData.agreedPrice),
+      actualTime: 0
     });
 
     setFormData({
@@ -201,7 +205,15 @@ const FormPave = () => {
               </div>
             </div>
 
-            <button 
+            <SmartPrediction
+              projectType="Pave"
+              style={formData.style}
+              material={formData.material}
+              stoneType={formData.stoneType}
+              goldWeight={Number(formData.goldBack) || undefined}
+            />
+
+            <button
               type="button"
               onClick={handleSimulate}
               className="w-full py-3 bg-gradient-to-r from-jewelry-gold to-jewelry-copper text-white rounded-lg font-bold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5"

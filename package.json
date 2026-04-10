@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.0",
     "axios": "^1.13.2",
     "chart.js": "^4.5.1",
     "framer-motion": "^12.23.25",
@@ -25,6 +26,7 @@
     "autoprefixer": "^10.4.22",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
+    "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
