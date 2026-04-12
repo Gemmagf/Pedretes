@@ -6,26 +6,61 @@ Registre de l'evolució del projecte per sessions de treball.
 
 ## Sessió 3 — 2026-04-12
 
-**Objectiu:** Autenticació multi-usuari, exportació PDF d'ofertes i llengua alemanya per defecte.
+**Objectiu:** Autenticació multi-usuari, exportació PDF d'ofertes en format suís i llengua alemanya com a principal.
+
+### Context
+L'app fins ara no tenia cap control d'accés: qualsevol persona amb l'URL podia veure i modificar totes les dades. Calia un sistema on cada membre del taller (Sarah, Valentin, etc.) pugui crear el seu propi compte i accedir amb la seva contrasenya. A més, el client va demanar poder exportar ofertes/pressupostos en format professional suís per enviar als clients de la joieria, i establir l'alemany com a llengua principal de l'app.
 
 ### Noves funcionalitats
-- **Autenticació amb Supabase Auth** (email + contrasenya)
-  - Nou fitxer `services/auth.ts` — `signIn`, `signUp`, `signOut`, `changePassword`, `getCurrentUser`, `onAuthStateChange`
-  - Nou context `context/AuthContext.tsx` — detecta sessió activa, exposa `user` i `logout`
-  - Nova pàgina `components/LoginPage.tsx` — formulari de login i registre integrat, missatges d'error en alemany
-  - `App.tsx` actualitzat — ruta protegida: si no hi ha sessió activa es mostra `LoginPage`
-  - `Navigation.tsx` actualitzat — mostra nom i email de l'usuari actiu i botó de logout
-  - `UserManagement.tsx` actualitzat — secció "Passwort ändern" per canviar la pròpia contrasenya
-- **Exportació de pressupost en PDF** (format suís Zuric)
-  - Nou fitxer `utils/pdfExport.ts` — genera un PDF professional per a cada projecte: capçalera en or, dades del client, taula de serveis (temps de treball a 120 CHF/h, pedres, or), subtotal, MwSt 8.1%, total en barra daurada, peu de pàgina
-  - Botó "Offerte exportieren (PDF)" afegit a cada `ProjectCard`
-  - Dependència `jspdf` instal·lada
-- **Alemany com a idioma per defecte** — canviat `useState<Language>('cat')` → `useState<Language>('de')` a `LanguageContext`
+
+#### 🔐 Autenticació amb Supabase Auth
+- **`services/auth.ts`** (fitxer nou) — capa d'abstracció sobre Supabase Auth amb les funcions: `signIn`, `signUp`, `signOut`, `changePassword`, `getCurrentUser`, `onAuthStateChange`. Centralitza tota la lògica d'autenticació en un sol lloc.
+- **`context/AuthContext.tsx`** (fitxer nou) — context React que detecta la sessió existent en carregar l'app (via `getSession`) i escolta canvis en temps real (via `onAuthStateChange`). Exposa `user` (id, email, nom) i la funció `logout` a tots els components.
+- **`components/LoginPage.tsx`** (fitxer nou) — pàgina de login/registre integrada en un sol formulari amb dues pestanyes (Anmelden / Registrieren). Inclou: toggle de visibilitat de contrasenya, validació client-side (longitud mínima, confirmació de contrasenya, nom obligatori), missatges d'error localitzats en alemany, i gestió del flux amb/sense confirmació d'email activada a Supabase.
+- **`App.tsx`** — afegit `AuthProvider` al arbre de providers. La lògica de ruta protegida és simple: si `loading` → spinner; si no hi ha `user` → `<LoginPage />`; si hi ha `user` → app completa. Cap llibreria externa de rutes protegides, tot inline.
+- **`Navigation.tsx`** — a la part inferior de la barra lateral es mostra l'avatar (inicial del nom), el nom complet i l'email de l'usuari connectat, amb un botó de logout (icona `LogOut` de lucide).
+- **`UserManagement.tsx`** — nova secció `<ChangePasswordCard>` a la pàgina Team que permet a l'usuari actiu canviar la seva pròpia contrasenya sense sortir de l'app. Usa `changePassword` de `services/auth.ts` que crida `supabase.auth.updateUser`.
+
+#### 📄 Exportació d'ofertes en PDF (format suís Zuric)
+- **`utils/pdfExport.ts`** (fitxer nou) — genera un PDF professional de format A4 amb `jsPDF`. Estructura del document:
+  - Capçalera daurada amb nom del taller i número d'oferta
+  - Bloc de client (esquerra) i projecte (dreta) amb data de lliurament
+  - Taula de serveis: temps de treball (a 120 CHF/h), pedres (preu/unitat × quantitat), or retornat, detalls d'estil/layout/fixació
+  - Totals: subtotal sense IVA → MwSt 8.1% → total en barra daurada
+  - Condicions de pagament (30 dies neto), validesa (30 dies), peu de pàgina amb dades del taller
+  - El preu total s'agafa de `agreedPrice` si existeix; si no, es calcula des de les línies
+- **`components/ProjectCard.tsx`** — afegit botó "Offerte exportieren (PDF)" a la part inferior de cada targeta de projecte (formularis Alliance, Fassung, Pavé)
+- **`components/Dashboard.tsx`** — afegit botó "PDF" a les accions de cada fila de projecte expandida al dashboard
+- Dependència `jspdf` instal·lada
+
+#### 🌐 Alemany com a idioma per defecte
+- `context/LanguageContext.tsx` — canviat l'estat inicial de `'cat'` a `'de'`. L'app s'obre en alemany; l'usuari pot canviar a Anglès o Català des del selector a la capçalera.
+
+### Decisions tècniques
+- La confirmació d'email de Supabase s'ha deixat **activada** (comportament per defecte i més segur). El codi detecta si l'usuari s'ha creat amb sessió activa o no i mostra el missatge adequat.
+- No s'han tocat les RLS policies de Supabase perquè les taules `projects` i `users` ja eren accessibles amb l'anon key. En un entorn de producció real caldria restringir-les a `auth.role() = 'authenticated'`.
+- El PDF es genera 100% al client (sense servidor), el que permet descarregues instantànies sense backend addicional.
+
+### Fitxers nous
+- `services/auth.ts`
+- `context/AuthContext.tsx`
+- `components/LoginPage.tsx`
+- `utils/pdfExport.ts`
+
+### Fitxers modificats
+- `App.tsx` — `AuthProvider` + ruta protegida
+- `components/Navigation.tsx` — usuari actiu + logout
+- `components/UserManagement.tsx` — canvi de contrasenya
+- `components/ProjectCard.tsx` — botó exportar PDF
+- `components/Dashboard.tsx` — botó PDF a files expandides
+- `context/LanguageContext.tsx` — idioma per defecte `'de'`
+- `package.json` / `package-lock.json` — dependència `jspdf`
 
 ### Estat al final de sessió
 - Branca: `correction-of-features`
+- PR #1 obert cap a `main`: https://github.com/Gemmagf/Pedretes/pull/1
 - Build de producció: ✓ sense errors TypeScript
-- Supabase Auth: requereix desactivar confirmació d'email al panell de Supabase (Authentication → Settings → Email confirmations: OFF)
+- App funcional a `http://localhost:3001`
 
 ---
 
