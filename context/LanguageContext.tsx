@@ -318,7 +318,7 @@ const translations: Record<Language, Record<string, string>> = {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('cat');
+  const [language, setLanguage] = useState<Language>('de');
 
   const t = (key: string, params?: Record<string, string | number>) => {
     let text = translations[language][key] || key;

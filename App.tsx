@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
@@ -7,8 +7,10 @@ import FormFassung from './components/FormFassung';
 import FormPave from './components/FormPave';
 import UserManagement from './components/UserManagement';
 import Analytics from './components/Analytics';
+import LoginPage from './components/LoginPage';
 import { LanguageProvider, useTranslation } from './context/LanguageContext';
 import { UsersProvider } from './context/UsersContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Globe } from 'lucide-react';
 
 const LanguageSelector = () => {
@@ -25,18 +27,30 @@ const LanguageSelector = () => {
         <option value="en">English</option>
         <option value="cat">Català</option>
       </select>
-      
     </div>
   );
 };
 
 const AppContent = () => {
   const { t } = useTranslation();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-jewelry-gold" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7]"> {/* Warm paper-like background */}
+    <div className="min-h-screen bg-[#FDFBF7]">
       <Navigation />
-      
+
       <main className="lg:ml-64 p-4 lg:p-8 transition-all duration-300">
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 pt-12 lg:pt-0">
           <div>
@@ -65,11 +79,13 @@ const AppContent = () => {
 
 const App = () => (
   <LanguageProvider>
-    <UsersProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </UsersProvider>
+    <AuthProvider>
+      <UsersProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </UsersProvider>
+    </AuthProvider>
   </LanguageProvider>
 );
 

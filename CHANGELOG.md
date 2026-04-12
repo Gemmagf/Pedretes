@@ -4,6 +4,31 @@ Registre de l'evolució del projecte per sessions de treball.
 
 ---
 
+## Sessió 3 — 2026-04-12
+
+**Objectiu:** Autenticació multi-usuari, exportació PDF d'ofertes i llengua alemanya per defecte.
+
+### Noves funcionalitats
+- **Autenticació amb Supabase Auth** (email + contrasenya)
+  - Nou fitxer `services/auth.ts` — `signIn`, `signUp`, `signOut`, `changePassword`, `getCurrentUser`, `onAuthStateChange`
+  - Nou context `context/AuthContext.tsx` — detecta sessió activa, exposa `user` i `logout`
+  - Nova pàgina `components/LoginPage.tsx` — formulari de login i registre integrat, missatges d'error en alemany
+  - `App.tsx` actualitzat — ruta protegida: si no hi ha sessió activa es mostra `LoginPage`
+  - `Navigation.tsx` actualitzat — mostra nom i email de l'usuari actiu i botó de logout
+  - `UserManagement.tsx` actualitzat — secció "Passwort ändern" per canviar la pròpia contrasenya
+- **Exportació de pressupost en PDF** (format suís Zuric)
+  - Nou fitxer `utils/pdfExport.ts` — genera un PDF professional per a cada projecte: capçalera en or, dades del client, taula de serveis (temps de treball a 120 CHF/h, pedres, or), subtotal, MwSt 8.1%, total en barra daurada, peu de pàgina
+  - Botó "Offerte exportieren (PDF)" afegit a cada `ProjectCard`
+  - Dependència `jspdf` instal·lada
+- **Alemany com a idioma per defecte** — canviat `useState<Language>('cat')` → `useState<Language>('de')` a `LanguageContext`
+
+### Estat al final de sessió
+- Branca: `correction-of-features`
+- Build de producció: ✓ sense errors TypeScript
+- Supabase Auth: requereix desactivar confirmació d'email al panell de Supabase (Authentication → Settings → Email confirmations: OFF)
+
+---
+
 ## Sessió 2 — 2026-04-10
 
 **Objectiu:** Migració del backend a Supabase i implementació de noves funcionalitats.

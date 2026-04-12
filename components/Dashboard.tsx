@@ -12,8 +12,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase, CheckCircle, AlertCircle, X,
   ChevronLeft, ChevronRight, User, Calendar as CalendarIcon,
-  TrendingUp, Filter, Clock, Play, Square, ChevronDown, ChevronUp
+  TrendingUp, Filter, Clock, Play, Square, ChevronDown, ChevronUp, FileDown
 } from 'lucide-react';
+import { exportProjectQuote } from '../utils/pdfExport';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler);
 
@@ -335,11 +336,20 @@ const ProjectRow = ({ project, users, onSelect, onProjectUpdate }: {
                 </div>
               </div>
 
-              {/* Edit button */}
-              <button onClick={e => { e.stopPropagation(); onSelect(); }}
-                className="w-full text-center text-xs text-jewelry-copper hover:text-jewelry-bronze font-medium py-1.5 border border-jewelry-gold/30 rounded-lg hover:bg-amber-50 transition">
-                {t('editProject')} →
-              </button>
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button onClick={e => { e.stopPropagation(); onSelect(); }}
+                  className="flex-1 text-center text-xs text-jewelry-copper hover:text-jewelry-bronze font-medium py-1.5 border border-jewelry-gold/30 rounded-lg hover:bg-amber-50 transition">
+                  {t('editProject')} →
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); exportProjectQuote(project); }}
+                  className="flex items-center gap-1.5 text-xs text-amber-700 hover:text-amber-900 font-medium py-1.5 px-3 border border-amber-200 rounded-lg hover:bg-amber-50 transition"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  PDF
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
