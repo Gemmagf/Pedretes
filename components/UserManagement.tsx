@@ -182,7 +182,7 @@ const UserManagement = () => {
                   <p className="font-semibold text-gray-800">{user.name}</p>
                   <p className="text-xs text-gray-400">
                     {user.workingDays.map(d => t(DAY_KEYS[DAY_NUMS.indexOf(d)])).join(' · ')}
-                    {user.daysOff.length > 0 && ` · ${user.daysOff.length} freie Tage`}
+                    {user.daysOff.length > 0 && ` · ${user.daysOff.length} ${t('freeDaysLabel')}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

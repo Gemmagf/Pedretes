@@ -82,7 +82,7 @@ const ProjectDetailModal = ({ project, onClose, onUpdate }: { project: Project; 
                 className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 mb-2 focus:ring-2 focus:ring-jewelry-rosegold outline-none" />
               <div className={`text-sm flex items-center gap-1 ${daysToDeadline < 3 ? 'text-red-500' : 'text-gray-500'}`}>
                 <CalendarIcon className="w-4 h-4" />
-                {daysToDeadline > 0 ? `${daysToDeadline} dies` : 'Vençut/Avui'}
+                {daysToDeadline > 0 ? `${daysToDeadline} ${t('daysLabel')}` : t('overdueToday')}
               </div>
             </div>
             <div className="bg-white p-4 rounded-2xl border border-jewelry-copper/30 shadow-sm">
@@ -314,7 +314,7 @@ const ProjectRow = ({ project, users, onSelect, onProjectUpdate }: {
               {project.totalTime && (
                 <div>
                   <div className="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>{fmtTime(totalMinutes)} de {fmtTime(project.totalTime)} est.</span>
+                    <span>{fmtTime(totalMinutes)} / {fmtTime(project.totalTime)}</span>
                     <span className={overBudget ? 'text-red-500 font-bold' : ''}>{Math.round(progress)}%</span>
                   </div>
                   <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">

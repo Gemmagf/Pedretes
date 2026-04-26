@@ -53,21 +53,21 @@ const Analytics = () => {
   if (best) {
     recommendations.push({
       icon: <Star className="w-4 h-4" />,
-      text: `${t('mostProfitable')}: ${best.type} (${fmt(best.chfPerHour)} CHF/h). Prioritza'l per maximitzar beneficis.`,
+      text: `${t('mostProfitable')}: ${t('recBestType', { type: best.type, rate: fmt(best.chfPerHour) })}`,
       color: 'bg-amber-50 border-amber-200 text-amber-800',
     });
   }
   if (topClient) {
     recommendations.push({
       icon: <Award className="w-4 h-4" />,
-      text: `${t('bestClient')}: ${topClient.client} — ${fmt(topClient.revenue)} CHF en ${topClient.projectCount} projectes.`,
+      text: `${t('bestClient')}: ${t('recBestClient', { client: topClient.client, revenue: fmt(topClient.revenue), count: topClient.projectCount })}`,
       color: 'bg-green-50 border-green-200 text-green-800',
     });
   }
   if (totalChfPerHour > 0 && totalChfPerHour < 100) {
     recommendations.push({
       icon: <TrendingUp className="w-4 h-4" />,
-      text: `La teva tarifa mitjana és ${fmt(totalChfPerHour)} CHF/h. Considera augmentar el preu acordat en projectes senzills.`,
+      text: t('recHourlyRate', { rate: fmt(totalChfPerHour) }),
       color: 'bg-blue-50 border-blue-200 text-blue-800',
     });
   }
@@ -76,7 +76,7 @@ const Analytics = () => {
     if (worst.chfPerHour < totalChfPerHour * 0.7) {
       recommendations.push({
         icon: <Lightbulb className="w-4 h-4" />,
-        text: `${worst.type} genera ${fmt(worst.chfPerHour)} CHF/h — molt per sota de la mitjana. Revisa els preus o el temps estimat.`,
+        text: t('recWorstType', { type: worst.type, rate: fmt(worst.chfPerHour) }),
         color: 'bg-red-50 border-red-200 text-red-800',
       });
     }
