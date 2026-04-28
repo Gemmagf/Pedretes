@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../context/LanguageContext';
 import { useUsers } from '../context/UsersContext';
+import { useDemo } from '../context/DemoContext';
 import { getProjects, updateProject, startTimer, stopTimer } from '../services/supabase';
 import { Project } from '../types';
 import {
@@ -210,6 +211,7 @@ const ProjectRow = ({ project, users, onSelect, onProjectUpdate }: {
   key?: string; project: Project; users: any[]; onSelect: () => void; onProjectUpdate: (p: Project) => void;
 }) => {
   const { t } = useTranslation();
+  const { isDemoMode } = useDemo();
   const [expanded, setExpanded] = useState(false);
   const [elapsed, setElapsed] = useState(0); // seconds
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -239,14 +241,19 @@ const ProjectRow = ({ project, users, onSelect, onProjectUpdate }: {
 
   const handleStartTimer = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await startTimer(project.id);
+    if (!isDemoMode) await startTimer(project.id);
     onProjectUpdate({ ...project, timerStartedAt: new Date().toISOString() });
   };
 
   const handleStopTimer = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const updated = await stopTimer(project);
-    if (updated) onProjectUpdate(updated);
+    if (isDemoMode) {
+      const elapsedMin = (Date.now() - new Date(project.timerStartedAt!).getTime()) / 60000;
+      onProjectUpdate({ ...project, actualTime: Math.round(((project.actualTime || 0) + elapsedMin) * 10) / 10, timerStartedAt: undefined });
+    } else {
+      const updated = await stopTimer(project);
+      if (updated) onProjectUpdate(updated);
+    }
   };
 
   const assignedUser = users.find(u => u.id === project.assignedTo);
@@ -361,7 +368,9 @@ const ProjectRow = ({ project, users, onSelect, onProjectUpdate }: {
 // --- Dashboard ---
 const Dashboard = () => {
   const { t } = useTranslation();
-  const { users } = useUsers();
+  const { users: realUsers } = useUsers();
+  const { isDemoMode, demoProjects, demoUsers, updateDemoProject } = useDemo();
+  const users = isDemoMode ? demoUsers : realUsers;
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -370,22 +379,28 @@ const Dashboard = () => {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
+  const colorize = (data: Project[]) => data.map(p => {
+    const hash = [...(p.projectName || '')].reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    return { ...p, color: `hsl(${25 + (hash % 25)}, ${70 + (hash % 20)}%, ${45 + (hash % 15)}%)` };
+  });
+
   const refreshData = async () => {
     setLoading(true);
-    const data = await getProjects();
-    const processed = data.map(p => {
-      const hash = [...(p.projectName || '')].reduce((acc, c) => acc + c.charCodeAt(0), 0);
-      return { ...p, color: `hsl(${25 + (hash % 25)}, ${70 + (hash % 20)}%, ${45 + (hash % 15)}%)` };
-    });
-    setProjects(processed);
+    if (isDemoMode) {
+      setProjects(colorize(demoProjects));
+    } else {
+      const data = await getProjects();
+      setProjects(colorize(data));
+    }
     setLoading(false);
   };
 
-  useEffect(() => { refreshData(); }, []);
+  useEffect(() => { refreshData(); }, [isDemoMode, demoProjects]);
 
   const updateProjectInState = (updated: Project) => {
     setProjects(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated, color: p.color } : p));
     if (selectedProject?.id === updated.id) setSelectedProject({ ...updated, color: selectedProject.color });
+    if (isDemoMode) updateDemoProject(updated);
   };
 
   useEffect(() => {
