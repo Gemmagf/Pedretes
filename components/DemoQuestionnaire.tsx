@@ -2,19 +2,24 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDemo } from '../context/DemoContext';
 import { CraftType, TeamSize, MainChallenge, DemoAnswers } from '../utils/demoData';
-import { X, ChevronRight, Gem, Watch, Layers, Package, Scissors, Wrench } from 'lucide-react';
+import { X, Gem, Watch, Layers, Package, Scissors, Wrench, UtensilsCrossed, Paintbrush, Car, Hammer, Building2 } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
 }
 
 const crafts: { value: CraftType; label: string; sub: string; icon: React.ReactNode }[] = [
-  { value: 'jewelry', label: 'Schmuck', sub: 'Ring, Collier, Armband…', icon: <Gem className="w-6 h-6" /> },
-  { value: 'watchmaking', label: 'Uhren', sub: 'Revision, Restauration…', icon: <Watch className="w-6 h-6" /> },
-  { value: 'ceramics', label: 'Keramik', sub: 'Serie, Unikat, Installation…', icon: <Layers className="w-6 h-6" /> },
-  { value: 'leather', label: 'Leder', sub: 'Taschen, Gürtel, Accessoires…', icon: <Package className="w-6 h-6" /> },
-  { value: 'textiles', label: 'Textil', sub: 'Couture, Maßschneiderei…', icon: <Scissors className="w-6 h-6" /> },
-  { value: 'other', label: 'Anderes', sub: 'Eigenes Handwerk', icon: <Wrench className="w-6 h-6" /> },
+  { value: 'jewelry',     label: 'Schmuck',      sub: 'Ring, Collier, Armband…',       icon: <Gem className="w-5 h-5" /> },
+  { value: 'watchmaking', label: 'Uhren',         sub: 'Revision, Restauration…',        icon: <Watch className="w-5 h-5" /> },
+  { value: 'ceramics',    label: 'Keramik',       sub: 'Serie, Unikat, Installation…',   icon: <Layers className="w-5 h-5" /> },
+  { value: 'leather',     label: 'Leder',         sub: 'Taschen, Gürtel, Accessoires…',  icon: <Package className="w-5 h-5" /> },
+  { value: 'textiles',    label: 'Textil',        sub: 'Couture, Maßschneiderei…',       icon: <Scissors className="w-5 h-5" /> },
+  { value: 'bakery',      label: 'Bäckerei',      sub: 'Torten, Catering, Patisserie…',  icon: <UtensilsCrossed className="w-5 h-5" /> },
+  { value: 'painter',     label: 'Malerei',       sub: 'Auftragskunst, Illustration…',   icon: <Paintbrush className="w-5 h-5" /> },
+  { value: 'mechanic',    label: 'Mechanik',      sub: 'Reparatur, Service, Umbau…',     icon: <Car className="w-5 h-5" /> },
+  { value: 'workshop',    label: 'Schreinerei',   sub: 'Möbel, Einbau, Restauration…',   icon: <Hammer className="w-5 h-5" /> },
+  { value: 'architect',   label: 'Architektur',   sub: 'Planung, Umbau, Beratung…',      icon: <Building2 className="w-5 h-5" /> },
+  { value: 'other',       label: 'Anderes',       sub: 'Eigenes Handwerk',               icon: <Wrench className="w-5 h-5" /> },
 ];
 
 const teamSizes: { value: TeamSize; label: string; sub: string }[] = [
@@ -56,18 +61,20 @@ const DemoQuestionnaire: React.FC<Props> = ({ onClose }) => {
       title: 'Was für ein Atelier hast du?',
       sub: 'Wir passen die Demo an dein Handwerk an.',
       content: (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {crafts.map(c => (
             <button
               key={c.value}
               onClick={() => { setCraft(c.value); setStep(1); }}
-              className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center hover:border-jewelry-gold hover:bg-amber-50/50 ${
+              className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-left hover:border-jewelry-gold hover:bg-amber-50/50 ${
                 craft === c.value ? 'border-jewelry-copper bg-amber-50' : 'border-gray-200'
               }`}
             >
-              <span className="text-jewelry-copper">{c.icon}</span>
-              <span className="font-semibold text-sm text-gray-800">{c.label}</span>
-              <span className="text-xs text-gray-400 leading-tight">{c.sub}</span>
+              <span className="text-jewelry-copper flex-shrink-0">{c.icon}</span>
+              <div>
+                <p className="font-semibold text-sm text-gray-800 leading-tight">{c.label}</p>
+                <p className="text-[10px] text-gray-400 leading-tight">{c.sub}</p>
+              </div>
             </button>
           ))}
         </div>

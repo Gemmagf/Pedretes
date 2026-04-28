@@ -1,6 +1,10 @@
 import { Project, User } from '../types';
 
-export type CraftType = 'jewelry' | 'watchmaking' | 'ceramics' | 'leather' | 'textiles' | 'other';
+export type CraftType =
+  | 'jewelry' | 'watchmaking' | 'ceramics' | 'leather' | 'textiles'
+  | 'bakery' | 'painter' | 'mechanic' | 'workshop' | 'architect'
+  | 'other';
+
 export type TeamSize = 'solo' | 'small' | 'medium' | 'large';
 export type MainChallenge = 'time' | 'clients' | 'costs' | 'all';
 
@@ -45,9 +49,9 @@ const CRAFT_CONFIG: Record<CraftType, {
     types: ['Alliance', 'Fassung', 'Pave'],
     typeLabels: ['Serie', 'Einzelstück', 'Installation'],
     projectNames: [
-      'Kaffeeservice 6-tlg.', 'Vase Handgedreht', 'Schüssel-Set Nordic',
+      'Kaffeeservice 6-tlg.', 'Vase handgedreht', 'Schüssel-Set Nordic',
       'Tischservice 12-tlg.', 'Wandinstallation Blau', 'Teekanne Unikat',
-      'Blumenübertopf', 'Skulptur Abstrakt', 'Tassen-Serie 24St.', 'Platzteller Restaurant',
+      'Blumenübertopf', 'Skulptur Abstrakt', 'Tassen-Serie 24 Stk.', 'Platzteller Restaurant',
     ],
     clients: ['Restaurant Seegarten', 'Hotel Drei Könige', 'Galerie Moderne', 'Interior Design AG', 'Boutique Zürich'],
   },
@@ -57,10 +61,10 @@ const CRAFT_CONFIG: Record<CraftType, {
     typeLabels: ['Tasche', 'Gürtel', 'Accessoire'],
     projectNames: [
       'Handtasche Milano', 'Ledergürtel klassisch', 'Portemonnaie Slim',
-      'Aktenmappe Executive', 'Rucksack Vintage', 'Schlüsselanhänger Set',
-      'Brieftasche XL', 'Shopper Damen', 'Hundeleine Leder', 'Notizbuchchulle',
+      'Aktenmappe Executive', 'Rucksack Vintage', 'Schlüsselanhänger-Set',
+      'Brieftasche XL', 'Shopper Damen', 'Hundeleine Leder', 'Notizbuchhülle',
     ],
-    clients: ['Mode Boutique AG', 'Galeries Du Nord', 'Geschäfte Bahnhofstr.', 'Online-Shop CH', 'Atelier Privat'],
+    clients: ['Mode Boutique AG', 'Galeries Du Nord', 'Bahnhofstrasse', 'Online-Shop CH', 'Atelier Privat'],
   },
   textiles: {
     label: 'Textilatelier',
@@ -72,6 +76,61 @@ const CRAFT_CONFIG: Record<CraftType, {
       'Jacke Tweed', 'Kleid Sommerkollektion', 'Schal Kaschmir', 'Blazer Wolle',
     ],
     clients: ['Opernhaus Zürich', 'Atelier Couture', 'Bühnenbild GmbH', 'Modehaus AG', 'Privatkunden'],
+  },
+  bakery: {
+    label: 'Bäckerei / Konditorei',
+    types: ['Alliance', 'Fassung', 'Pave'],
+    typeLabels: ['Hochzeitstorte', 'Tagesgebäck', 'Catering'],
+    projectNames: [
+      'Hochzeitstorte 5-stöckig', 'Geburtstagstorte Motiv', 'Brottage Catering 80 Pax',
+      'Konfiserie-Box Weihnacht', 'Törtchen-Serie Patisserie', 'Brioche-Lieferung wöchentl.',
+      'Makronen-Set 120 Stk.', 'Butterzopf Abo', 'Tarte Tatin Restaurant', 'Cupcakes Event',
+    ],
+    clients: ['Hotel Baur au Lac', 'Restaurant Kronenhalle', 'Firma Roche AG', 'Catering Events GmbH', 'Privatkunden'],
+  },
+  painter: {
+    label: 'Malerei / Atelier',
+    types: ['Alliance', 'Fassung', 'Pave'],
+    typeLabels: ['Auftrag', 'Edition', 'Restauration'],
+    projectNames: [
+      'Wandgemälde Lobby', 'Porträt Auftragsarbeit', 'Acryl Triptychon',
+      'Illustration Buchcover', 'Wandbild Restaurant', 'Edition 30 Drucke',
+      'Kunstinstallation Messe', 'Restauration Gemälde 18Jh', 'Logoentwurf + Illustration', 'Kinderillustration Serie',
+    ],
+    clients: ['Galerie Bernheim', 'Hotel Widder', 'Verlag Christoph Merian', 'Sammler Privat', 'Architekturbüro Zürich'],
+  },
+  mechanic: {
+    label: 'Mechanik / Werkstatt',
+    types: ['Alliance', 'Fassung', 'Pave'],
+    typeLabels: ['Reparatur', 'Service', 'Umbau'],
+    projectNames: [
+      'Motor Revision komplett', 'Bremsen Inspektion', 'Getriebe Instandsetzung',
+      'Unfallschaden Reparatur', 'Ölwechsel Service', 'Stossdämpfer Ersatz',
+      'Karosserie Lackierung', 'Klimaanlage Service', 'Abgasanlage Reparatur', 'Fahrwerk Einstellung',
+    ],
+    clients: ['Flotte Coop AG', 'Transporte Müller', 'Privatkunde Maier', 'Taxi Zürich GmbH', 'Feuerwehr Gemeinde'],
+  },
+  workshop: {
+    label: 'Schreinerei / Tischlerei',
+    types: ['Alliance', 'Fassung', 'Pave'],
+    typeLabels: ['Möbel', 'Einbau', 'Restauration'],
+    projectNames: [
+      'Küche Massivholz Eiche', 'Schlafzimmer Einbauschrank', 'Esstisch 8 Personen',
+      'Parkettboden Verlegen', 'Treppengeländer Nussbaum', 'Terrassendeck Douglasie',
+      'Badezimmer-Möbel', 'Regalsystem Bibliothek', 'Antiker Schrank Restauration', 'Kinderbett Massivholz',
+    ],
+    clients: ['Architekturbüro Meier', 'Immobilien Swiss AG', 'Privat Fam. Keller', 'Hotel Mountain View', 'Büro Umbau GmbH'],
+  },
+  architect: {
+    label: 'Architekturbüro',
+    types: ['Alliance', 'Fassung', 'Pave'],
+    typeLabels: ['Planung', 'Ausführung', 'Beratung'],
+    projectNames: [
+      'Wohnhaus Neubau 5 Zi.', 'Bürogebäude Umbau', 'Dachausbau Altbau',
+      'Gartenhaus Planung', 'Badezimmer Renovation', 'Küche Umbau komplett',
+      'Einfamilienhaus Renovation', 'Gewerbehalle Neubau', 'Wohnüberbauung 12 Wohnungen', 'Innenarchitektur Restaurant',
+    ],
+    clients: ['Gemeinde Küsnacht', 'Immobilien Helvetia AG', 'Privat Familie Huber', 'Klinik Hirslanden', 'Genossenschaft Zürich West'],
   },
   other: {
     label: 'Handwerksatelier',
@@ -93,7 +152,9 @@ const TEAM_NAMES: Record<TeamSize, string[]> = {
   large: ['Sarah', 'Thomas', 'Laura', 'Marco', 'Anna', 'Felix'],
 };
 
-const statuses: Array<'Pending' | 'In Progress' | 'Completed'> = ['Completed', 'Completed', 'Completed', 'In Progress', 'In Progress', 'Pending'];
+const statuses: Array<'Pending' | 'In Progress' | 'Completed'> = [
+  'Completed', 'Completed', 'Completed', 'In Progress', 'In Progress', 'Pending',
+];
 
 function rand(min: number, max: number) {
   return Math.round(Math.random() * (max - min) + min);
@@ -123,11 +184,11 @@ export function generateDemoProjects(answers: DemoAnswers): Project[] {
     const sheetType = cfg.types[i % 3];
     const status = statuses[i % statuses.length];
     const totalTime = rand(30, 480);
-    const actualTime = status === 'Completed' ? rand(Math.round(totalTime * 0.8), Math.round(totalTime * 1.2))
-                     : status === 'In Progress' ? rand(0, Math.round(totalTime * 0.6))
-                     : 0;
+    const actualTime =
+      status === 'Completed' ? rand(Math.round(totalTime * 0.8), Math.round(totalTime * 1.2))
+      : status === 'In Progress' ? rand(0, Math.round(totalTime * 0.6))
+      : 0;
     const agreedPrice = rand(80, 1200);
-    const stoneCount = rand(4, 48);
     const daysOld = rand(5, 300);
 
     projects.push({
@@ -139,7 +200,7 @@ export function generateDemoProjects(answers: DemoAnswers): Project[] {
       assignedTo: undefined,
       date: daysAgo(daysOld),
       deadline: status !== 'Completed' ? daysAhead(rand(3, 45)) : undefined,
-      stoneCount,
+      stoneCount: rand(1, 12),
       timePerStone: rand(3, 15),
       totalTime,
       actualTime,
@@ -147,8 +208,8 @@ export function generateDemoProjects(answers: DemoAnswers): Project[] {
       agreedPrice,
       goldWeight: rand(1, 8),
       stoneSize: parseFloat((rand(10, 35) / 10).toFixed(1)),
-      stoneType: pickRandom(['Brillant', 'Saphir', 'Rubin', 'Smaragd', 'Topas']),
-      material: pickRandom(['Gold 750', 'Gold 585', 'Silber 925', 'Platin']),
+      stoneType: pickRandom(['Premium', 'Standard', 'Spezial', 'Deluxe']),
+      material: pickRandom(['Material A', 'Material B', 'Material C', 'Spezial']),
       style: pickRandom(['Klassisch', 'Modern', 'Vintage', 'Minimalist']),
     });
   }
@@ -157,8 +218,7 @@ export function generateDemoProjects(answers: DemoAnswers): Project[] {
 }
 
 export function generateDemoUsers(answers: DemoAnswers): User[] {
-  const names = TEAM_NAMES[answers.teamSize];
-  return names.map((name, i) => ({
+  return TEAM_NAMES[answers.teamSize].map((name, i) => ({
     id: `demo-user-${i}`,
     name,
     baseHours: 40,
@@ -170,8 +230,4 @@ export function generateDemoUsers(answers: DemoAnswers): User[] {
 
 export function getCraftLabel(craft: CraftType): string {
   return CRAFT_CONFIG[craft].label;
-}
-
-export function getTypeLabel(craft: CraftType, index: number): string {
-  return CRAFT_CONFIG[craft].typeLabels[index] ?? CRAFT_CONFIG[craft].types[index];
 }
