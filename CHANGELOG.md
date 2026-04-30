@@ -4,6 +4,91 @@ Registre de l'evolució del projecte per sessions de treball.
 
 ---
 
+## Sessió 4 — 2026-04-30
+
+**Objectiu:** Deploy a Vercel, correcció de bugs de producció, landing page pública i mode demo amb qüestionari.
+
+### Context
+La sessió anterior havia deixat el codi funcionant en local. Aquesta sessió es va centrar en fer el deploy real a Vercel, diagnosticar i corregir els problemes que apareixien en producció (pàgina en blanc, variables d'entorn, CSS), i afegir una landing page amb demo interactiva per poder mostrar l'app a potencials clients i al portfolio.
+
+### Deploy a Vercel
+
+#### Problemes diagnosticats i resolts
+1. **`index.html` amb `importmap` de Google AI Studio** — l'HTML original carregava React i totes les llibreries des de CDN (`aistudiocdn.com`), cosa que xocava completament amb el bundle de Vite. Eliminat.
+2. **`tailwind.config.js` apuntava a `./src/**/*`** — tots els components estan a l'arrel, no dins `src/`. Corregit el `content` i afegits els colors `jewelry-*` i les fonts.
+3. **CSS no inclòs al bundle** — quan es va netejar l'`index.html` es va perdre el `<link rel="stylesheet">`. Solucionat afegint `import './index.css'` a `index.tsx`.
+4. **Tailwind v4 vs v3 syntax** — el projecte usa `@tailwindcss/postcss` v4 però `index.css` tenia sintaxi v3 (`@tailwind base/components/utilities`). Migrat a `@import "tailwindcss"` + `@theme { }` amb variables CSS custom. El CSS va passar de 9KB a 45KB (tots els estils generats correctament).
+5. **`vercel.json` amb `rewrites` massa amplis** — la regla `"source": "/(.*)"` interceptava totes les peticions incloent els chunks JS/CSS, fent que Vercel retornés `index.html` per a cada fitxer. Canviat a `routes` amb regles específiques per a `/assets/` i fitxers estàtics.
+6. **Variables d'entorn només a nivell de Team** — `VITE_SUPABASE_URL` i `VITE_SUPABASE_ANON_KEY` estaven configurades a nivell de Team de Vercel però no al projecte específic. Afegides via CLI (`npx vercel env add`).
+7. **Strings hardcodejats en català** — `"Vençut/Avui"`, `"dies lliures"`, textos de recomanacions d'Analytics en català. Afegides les claus de traducció a `LanguageContext` i substituïts tots els strings per `t()`.
+
+#### Fitxers modificats per al deploy
+- `index.html` — netejat (eliminat importmap, CDN Tailwind, config inline)
+- `index.css` — migrat a Tailwind v4 + `@theme` amb colors i fonts
+- `index.tsx` — afegit `import './index.css'`
+- `tailwind.config.js` — paths correctes + colors jewelry-* + fonts
+- `vercel.json` — `routes` en comptes de `rewrites`
+- `context/LanguageContext.tsx` — 8 claus noves (de/en/cat)
+- `components/Dashboard.tsx` — strings traduits
+- `components/Analytics.tsx` — recomanacions traduits
+- `components/UserManagement.tsx` — string `freeDaysLabel` traduït
+
+### 🌐 Landing Page pública + Mode Demo
+
+#### Landing Page (`components/LandingPage.tsx`)
+- Pàgina pública accessible sense login a `pedretes-one.vercel.app`
+- Hero amb tagline, dos CTAs: "Demo entdecken" i "Anmelden"
+- Secció de 6 funcionalitats amb icones
+- Testimonial fictici d'una goldschmiedin de Zuric
+- Secció CTA inferior
+- Navegació fixa amb logo i botó d'accés
+
+#### Qüestionari de personalització (`components/DemoQuestionnaire.tsx`)
+- Modal de 3 passos amb animació (Framer Motion)
+- **Pas 1 — Tipus d'obrador** (11 opcions amb icona):
+  Schmuck, Uhren, Keramik, Leder, Textil, Bäckerei, Malerei, Mechanik, Schreinerei, Architektur, Anderes
+- **Pas 2 — Mida de l'equip**: Solo / 2–3 / 4–10 / +10
+- **Pas 3 — Principal repte**: Temps / Clients / Costos / Tot
+- Camp opcional per al nom del taller
+- Barra de progrés visual
+
+#### Generador de dades sintètiques (`utils/demoData.ts`)
+- 11 sectors amb noms de projecte, clients i tipus de treballs específics
+- Tots els clients són **B2B** (empreses, hotels, restaurants, institucions)
+- Genera 28 projectes amb estats, temps, preus i dates realistes
+- Genera equip amb noms segons la mida seleccionada
+
+#### Mode Demo (`context/DemoContext.tsx`)
+- Context React que gestiona l'estat del mode demo
+- Dades 100% locals (sense tocar Supabase ni la BD real)
+- `Dashboard.tsx` adaptat per usar dades de demo: timer funcional en local, `updateDemoProject` en lloc de Supabase
+- Banner taronja "Demo-Modus" fix a la part superior amb nom del taller i botó "Demo beenden"
+- Flux complet: Landing → Qüestionari → Demo | Anmelden → App real
+
+### Estat al final de sessió
+- **URL producció**: https://pedretes-one.vercel.app
+- **Branca activa**: `main` (deploy directe)
+- **Build**: ✓ sense errors TypeScript
+- **Auth**: Supabase Auth funcionant en producció (confirmació email activada)
+- **Demo**: accessible públicament sense registre
+
+### Decisions preses
+- La landing page substitueix la `LoginPage` com a primera pantalla per a usuaris no autenticats; el login és accessible via "Anmelden"
+- El mode demo no crea usuaris a Supabase ni escriu res a la BD — tot és efímer en memòria
+- Es va decidir **mantenir** la confirmació d'email de Supabase activada (més segur)
+- Els clients de la demo són B2B per reflectir la gestió real d'un obrador professional
+
+### Pendent / Possibles millores futures
+- [ ] Afegir pregunta al qüestionari sobre tipus de client (B2B / B2C / Mixt) per adaptar noms de clients generats
+- [ ] Analytics en mode demo (ara mostra dades de Supabase en lloc de les sintètiques)
+- [ ] FormAlliance / FormFassung / FormPave en mode demo (ara no guarden res)
+- [ ] Domini personalitzat a Vercel (ara és `pedretes-one.vercel.app`)
+- [ ] Afegir el taller real com a usuari inicial (script o panel Supabase)
+- [ ] Icona / favicon personalitzat (ara és el favicon per defecte de Vite)
+- [ ] SEO bàsic: `og:title`, `og:description`, `og:image` per compartir a xarxes
+
+---
+
 ## Sessió 3 — 2026-04-12
 
 **Objectiu:** Autenticació multi-usuari, exportació PDF d'ofertes en format suís i llengua alemanya com a principal.
