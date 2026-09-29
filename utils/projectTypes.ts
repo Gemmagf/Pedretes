@@ -28,14 +28,14 @@ export interface ProjectTypeConfig {
   fields: FieldDef[];
   /** Estimated working minutes for the job. */
   estimateMinutes: (v: FormValues) => number;
-  /** Price components before margin and urgency fee. */
-  priceLines: (v: FormValues, minutes: number) => PriceLine[];
+  /** Price components before margin and urgency fee (rate = configured target CHF/h). */
+  priceLines: (v: FormValues, minutes: number, rate: number) => PriceLine[];
 }
 
 const num = (s: string) => Number(s) || 0;
 
 /** The atelier prices per stone (labour included); time × rate is the fallback when no stone price is set. */
-const perStonePricing = (rate: number) => (v: FormValues, minutes: number): PriceLine[] => {
+const perStonePricing = (v: FormValues, minutes: number, rate: number): PriceLine[] => {
   if (num(v.pricePerStone) && num(v.stoneCount)) {
     return [{ key: 'stones', amount: num(v.pricePerStone) * num(v.stoneCount), detail: `${num(v.stoneCount)} × ${num(v.pricePerStone)} CHF` }];
   }
@@ -81,13 +81,13 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
       common.stoneCount, common.totalTime, common.pricePerStone, common.goldWeight, common.deadline,
     ],
     estimateMinutes: v => num(v.totalTime),
-    priceLines: perStonePricing(HOURLY_RATE),
+    priceLines: perStonePricing,
   },
   Fassung: {
     type: 'Fassung',
     titleKey: 'fassungFormTitle',
     subtitleKey: 'fassungSubtitle',
-    hourlyRate: 140,
+    hourlyRate: HOURLY_RATE,
     fields: [
       common.client, common.assignedTo,
       { name: 'stoneType', labelKey: 'stoneType', kind: 'select', options: OPTIONS.stoneTypes },
@@ -97,7 +97,7 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
       common.stoneCount, common.totalTime, common.pricePerStone, common.goldWeight, common.deadline,
     ],
     estimateMinutes: v => num(v.totalTime),
-    priceLines: perStonePricing(140),
+    priceLines: perStonePricing,
   },
   Pave: {
     type: 'Pave',
@@ -114,7 +114,7 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
       common.stoneCount, common.totalTime, common.pricePerStone, common.goldWeight, common.deadline,
     ],
     estimateMinutes: v => num(v.totalTime),
-    priceLines: perStonePricing(HOURLY_RATE),
+    priceLines: perStonePricing,
   },
 };
 

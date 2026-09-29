@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { LayoutDashboard, BarChart3, CircleDot, Gem, Sparkles, Users, Menu, X, LogOut, FlaskConical, Timer } from 'lucide-react';
+import { LayoutDashboard, BarChart3, CircleDot, Gem, Sparkles, Users, Menu, X, LogOut, FlaskConical, Timer, CalendarRange } from 'lucide-react';
 import { useTranslation } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useDemo } from '../context/DemoContext';
@@ -14,6 +14,7 @@ interface Link { path: string; icon: React.ComponentType<{ className?: string }>
 
 const MAIN: Link[] = [
   { path: '/', icon: LayoutDashboard, labelKey: 'dashboard' },
+  { path: '/planning', icon: CalendarRange, labelKey: 'planning' },
   { path: '/analytics', icon: BarChart3, labelKey: 'analytics' },
 ];
 const ORDERS: Link[] = [

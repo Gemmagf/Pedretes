@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calculator, CalendarCheck, Coins, Check } from 'lucide-react';
+import { Calculator, CalendarCheck, Coins, Check, AlertTriangle } from 'lucide-react';
 import type { Project, User } from '../types';
 import { useTranslation } from '../context/LanguageContext';
+import { useSettings } from '../context/SettingsContext';
 import { getGoldPricePerGram, type GoldSource } from '../services/goldAPI';
 import { type FormValues, type ProjectTypeConfig } from '../utils/projectTypes';
 import { openMinutesFor, suggestDeliveryDate } from '../utils/scheduling';
@@ -14,12 +15,13 @@ interface Props {
   values: FormValues;
   users: User[];
   projects: Project[];
-  onApply: (patch: { agreedPrice: string; deadline: string }) => void;
+  onApply: (patch: Partial<FormValues>) => void;
 }
 
 /** Live quote: price breakdown, capacity-aware delivery date, gold value and experience data. */
 const SimulatorPanel: React.FC<Props> = ({ config, values, users, projects, onApply }) => {
   const { t, locale } = useTranslation();
+  const { targetRate } = useSettings();
   const [margin, setMargin] = useState(1);
   const [urgency, setUrgency] = useState(0);
   const [goldPrice, setGoldPrice] = useState<number>(0);
@@ -32,7 +34,7 @@ const SimulatorPanel: React.FC<Props> = ({ config, values, users, projects, onAp
   }, []);
 
   const minutes = config.estimateMinutes(values);
-  const lines = useMemo(() => config.priceLines(values, minutes), [config, values, minutes]);
+  const lines = useMemo(() => config.priceLines(values, minutes, targetRate), [config, values, minutes, targetRate]);
   const base = lines.reduce((a, l) => a + l.amount, 0);
   const total = Math.round(base * margin + urgency);
 
@@ -47,6 +49,8 @@ const SimulatorPanel: React.FC<Props> = ({ config, values, users, projects, onAp
   const goldValue = goldWeight && goldPrice ? Math.round(goldWeight * goldPrice) : 0;
   const filters = useMemo(() => ({ style: values.style, material: values.material, stoneType: values.stoneType, shape: values.shape }), [values.style, values.material, values.stoneType, values.shape]);
   const hasInput = minutes > 0 || base > 0;
+  const impliedRate = minutes > 0 ? total / (minutes / 60) : null;
+  const belowTarget = impliedRate !== null && total > 0 && impliedRate < targetRate * 0.85;
 
   return (
     <aside className="card flex flex-col overflow-hidden xl:sticky xl:top-6">
@@ -99,7 +103,12 @@ const SimulatorPanel: React.FC<Props> = ({ config, values, users, projects, onAp
             <span className="kicker">{t('suggestedPrice')}</span>
             <span className="font-serif text-2xl font-semibold text-copper-600">{fmtNumber(total)} <span className="text-sm font-sans text-ink-500">CHF</span></span>
           </div>
-          {minutes > 0 && <p className="mt-1 text-right text-[11px] text-ink-400">{fmtMinutes(minutes)} · {fmtNumber(total / (minutes / 60))} CHF/h</p>}
+          {impliedRate !== null && total > 0 && (
+            <p className={`mt-2 flex items-center justify-end gap-1 text-[11px] ${belowTarget ? 'font-semibold text-red-600' : 'text-ink-400'}`}>
+              {belowTarget && <AlertTriangle className="h-3 w-3" />}
+              {fmtMinutes(minutes)} · {belowTarget ? t('rateWarning', { rate: fmtNumber(impliedRate), target: targetRate }) : t('rateOk', { rate: fmtNumber(impliedRate) })}
+            </p>
+          )}
         </div>
 
         {/* Delivery */}
@@ -121,7 +130,7 @@ const SimulatorPanel: React.FC<Props> = ({ config, values, users, projects, onAp
           </div>
         )}
 
-        <SmartPrediction projects={projects} type={config.type} filters={filters} />
+        <SmartPrediction projects={projects} type={config.type} filters={filters} stoneCount={Number(values.stoneCount) || 0} onApply={onApply} />
 
         <Button variant="gold" className="w-full" disabled={!hasInput} icon={<Check className="h-4 w-4" />}
           onClick={() => onApply({ agreedPrice: String(total), deadline: schedule.date })}>

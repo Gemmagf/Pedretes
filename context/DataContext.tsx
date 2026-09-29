@@ -5,6 +5,7 @@ import { seedLocalData } from '../utils/localSeed';
 import { STORAGE_KEYS } from '../utils/constants';
 import { useAuth } from './AuthContext';
 import { useDemo } from './DemoContext';
+import { useSettings } from './SettingsContext';
 
 interface DataContextType {
   store: Store;
@@ -26,12 +27,13 @@ const getLocalStore = () => {
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const { demoStore, demoAnswers } = useDemo();
+  const { workshopName } = useSettings();
 
   const value = useMemo<DataContextType>(() => {
     if (demoStore) return { store: demoStore, workshopName: demoAnswers?.workshopName || 'Mein Atelier' };
-    if (user?.provider === 'local') return { store: getLocalStore(), workshopName: 'Pedretes Atelier' };
-    return { store: supabaseStore, workshopName: 'Pedretes Atelier' };
-  }, [demoStore, demoAnswers, user]);
+    if (user?.provider === 'local') return { store: getLocalStore(), workshopName };
+    return { store: supabaseStore, workshopName };
+  }, [demoStore, demoAnswers, user, workshopName]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

@@ -1,12 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { UserPlus, ChevronDown, ChevronUp, X, KeyRound, Eye, EyeOff, ShieldCheck, Database, Download, Upload, RotateCcw, Users } from 'lucide-react';
+import { UserPlus, ChevronDown, ChevronUp, X, KeyRound, Eye, EyeOff, ShieldCheck, Database, Download, Upload, RotateCcw, Users, Store } from 'lucide-react';
 import type { User } from '../types';
 import { useUsers } from '../context/UsersContext';
 import { useTranslation } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useToast } from '../context/ToastContext';
+import { useSettings } from '../context/SettingsContext';
 import { changePassword } from '../services/auth';
 import type { DataSnapshot } from '../services/store';
 import { hoursPerDay } from '../utils/scheduling';
@@ -66,6 +67,28 @@ const ChangePasswordCard: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+    </Card>
+  );
+};
+
+// --- Atelier settings ---------------------------------------------------------
+
+const AtelierCard: React.FC = () => {
+  const { t } = useTranslation();
+  const { targetRate, workshopName, update } = useSettings();
+  return (
+    <Card title={t('atelierSettings')} icon={<Store className="h-5 w-5" />}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label={t('workshopName')} hint={t('workshopNameHint')}>
+          <input className="input" value={workshopName} onChange={e => update({ workshopName: e.target.value })} />
+        </Field>
+        <Field label={t('targetRate')} hint={t('targetRateHint')}>
+          <div className="relative">
+            <input type="number" min={1} step={5} className="input pr-16" value={targetRate} onChange={e => update({ targetRate: Math.max(1, Number(e.target.value) || 0) })} />
+            <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-ink-400">CHF/h</span>
+          </div>
+        </Field>
+      </div>
     </Card>
   );
 };
@@ -219,6 +242,7 @@ const UserManagement: React.FC = () => {
         </div>
       </Card>
 
+      <AtelierCard />
       {store.kind === 'local' && <DataCard />}
       {authUser?.provider === 'supabase' && <ChangePasswordCard />}
     </div>

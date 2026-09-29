@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { DemoProvider, useDemo } from './context/DemoContext';
 import { DataProvider } from './context/DataContext';
 import { ToastProvider } from './context/ToastContext';
+import { SettingsProvider } from './context/SettingsContext';
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
@@ -38,6 +39,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
   <LanguageProvider>
+    <SettingsProvider>
     <ToastProvider>
       <AuthProvider>
         <DemoProvider>
@@ -45,6 +47,7 @@ const App: React.FC = () => (
         </DemoProvider>
       </AuthProvider>
     </ToastProvider>
+    </SettingsProvider>
   </LanguageProvider>
 );
 

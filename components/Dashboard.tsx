@@ -14,7 +14,8 @@ import { useToast } from '../context/ToastContext';
 import { useData } from '../context/DataContext';
 import { useProjects } from '../hooks/useProjects';
 import { exportProjectQuote } from '../utils/pdfExport';
-import { HOURLY_RATE } from '../utils/constants';
+import { useSettings } from '../context/SettingsContext';
+import { planSchedule } from '../utils/planning';
 import { upcomingDeadlines } from '../utils/analytics';
 import { colorFor, daysUntil, fmtClock, fmtDate, fmtMinutes, fmtNumber, statusKey, toISODate } from '../utils/format';
 import { TYPE_LABEL } from '../utils/projectTypes';
@@ -57,6 +58,7 @@ const ProjectEditModal: React.FC<{
   onSave: (p: Project) => Promise<unknown>; onDelete: (p: Project) => Promise<unknown>;
 }> = ({ project, users, onClose, onSave, onDelete }) => {
   const { t } = useTranslation();
+  const { targetRate: HOURLY_RATE } = useSettings();
   const [edited, setEdited] = useState<Project>({ ...project });
   const [saving, setSaving] = useState(false);
   const set = <K extends keyof Project>(k: K, v: Project[K]) => setEdited(prev => ({ ...prev, [k]: v }));
@@ -224,6 +226,7 @@ const ProjectRow: React.FC<{
   onEdit: () => void; onStart: () => void; onStop: () => void; onStatus: (s: ProjectStatus) => void;
 }> = ({ project, user, workshopName, onEdit, onStart, onStop, onStatus }) => {
   const { t } = useTranslation();
+  const { targetRate: HOURLY_RATE } = useSettings();
   const [expanded, setExpanded] = useState(false);
   const elapsed = useElapsed(project);
   const running = !!project.timerStartedAt;
@@ -345,6 +348,7 @@ const Dashboard: React.FC = () => {
     plannedHours: filtered.filter(p => p.status !== 'Completed').reduce((s, p) => s + Math.max(0, (p.totalTime || 0) - (p.actualTime || 0)), 0) / 60,
   };
   const deadlines = useMemo(() => upcomingDeadlines(projects, 6), [projects]);
+  const lateIds = useMemo(() => new Set(planSchedule(projects, users, { weeks: 1 }).items.filter(i => i.late).map(i => i.project.id)), [projects, users]);
   const overdueCount = deadlines.filter(p => (daysUntil(p.deadline) ?? 1) < 0).length;
 
   const workloadData = useMemo(() => ({
@@ -431,6 +435,7 @@ const Dashboard: React.FC = () => {
                         <span className="block truncate text-sm font-medium text-ink-900">{p.projectName}</span>
                         <span className="block truncate text-xs text-ink-400">{p.client} · {fmtDate(p.deadline, locale, { day: '2-digit', month: 'short' })}</span>
                       </span>
+                      {lateIds.has(p.id) && <span title={t('atRisk')} className="text-red-500"><AlertTriangle className="h-3.5 w-3.5" /></span>}
                       <DeadlineChip deadline={p.deadline} />
                     </button>
                   </li>

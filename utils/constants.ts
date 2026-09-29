@@ -14,6 +14,7 @@ export const STORAGE_KEYS = {
   language: 'pedretes.lang',
   session: 'pedretes.session',
   localData: 'pedretes.local.v2',
+  settings: 'pedretes.settings',
 } as const;
 
 /** Local (offline) account. Data lives in the browser only. */

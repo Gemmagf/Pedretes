@@ -5,6 +5,7 @@ import { FlaskConical, X, CalendarDays } from 'lucide-react';
 import Navigation from './Navigation';
 import Dashboard from './Dashboard';
 import Analytics from './Analytics';
+import Planning from './Planning';
 import ProjectFormPage from './ProjectFormPage';
 import UserManagement from './UserManagement';
 import { useTranslation } from '../context/LanguageContext';
@@ -14,6 +15,7 @@ import type { TranslationKey } from '../i18n';
 const PAGE_META: Record<string, { title: TranslationKey; subtitle: TranslationKey }> = {
   '/': { title: 'dashboardTitle', subtitle: 'dashboardSubtitle' },
   '/analytics': { title: 'analyticsTitle', subtitle: 'analyticsSubtitle' },
+  '/planning': { title: 'planningTitle', subtitle: 'planningSubtitle' },
   '/alliance': { title: 'allianceFormTitle', subtitle: 'allianceSubtitle' },
   '/fassung': { title: 'fassungFormTitle', subtitle: 'fassungSubtitle' },
   '/pave': { title: 'paveFormTitle', subtitle: 'paveSubtitle' },
@@ -70,6 +72,7 @@ const AppShell: React.FC = () => {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/planning" element={<Planning />} />
             <Route path="/alliance" element={<ProjectFormPage type="Alliance" />} />
             <Route path="/fassung" element={<ProjectFormPage type="Fassung" />} />
             <Route path="/pave" element={<ProjectFormPage type="Pave" />} />

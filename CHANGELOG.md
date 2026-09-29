@@ -26,6 +26,14 @@ Registre de l'evolució del projecte per sessions de treball.
 - `scripts/import_sheet.py` converteix el full «Formular Sareta» (respostes dels 3 formularis de Google) a `data/sareta-projects.json`: 305 comandes reals (210 Fassung, 74 Pavé, 21 Alliance) que són el seed del compte local. Preu = preu per pedra × nombre de pedres; nom derivat quan falta; files de prova excloses.
 - Opcions dels formularis alineades amb els formularis reals (tipus de pedra, materials, estils Fassung/Pavé, disseny «vorhanden / nicht vorhanden», fixació, forma lliure amb suggeriments) i preu calculat per pedra a tots els tipus.
 
+### Pensat per a un taller d'encastadors (i generalitzable)
+- **Planificació** (`utils/planning.ts`, pàgina nova): planificador de capacitat que reparteix les comandes obertes per termini entre els dies laborables de cada persona; càrrega per setmana, ordre de treball amb inici/fi previstos, detecció de terminis en risc, assignació suggerida per a comandes sense persona i reassignació en línia.
+- **Prediccions per pedra** (`predictPerStone`): mediana i rang de minuts i preu per pedra de comandes similars, amb relaxació progressiva de la coincidència (estil + pedra + material → … → tipus), nivell de fiabilitat i projecció al nombre de pedres; botó per aplicar-ho al formulari. Avís al simulador si el preu queda per sota de la tarifa objectiu.
+- **Rendibilitat per segment** (`computeRateBy`): CHF/h per estil, tipus de pedra, mida de comanda i client, amb quota de facturació, preu mitjà per pedra i comparació amb la tarifa objectiu.
+- **Clients**: hores, quota, CHF/h efectiu, última comanda i tendència (últims 90 dies vs. anteriors).
+- **Recomanacions accionables**: preu per pedra necessari per arribar a la tarifa objectiu, client que paga per sota, concentració de risc (>40 % en un client), segment més rendible, terminis en perill.
+- **Configuració** (`SettingsContext`): nom del taller i tarifa horària objectiu, usats a costos, avisos i consells.
+
 ### Mode demo complet
 - Analítiques amb dades sintètiques (abans mostrava dades de Supabase).
 - Els formularis creen comandes a la demo; predicció intel·ligent i simulador usen les dades de demo.
