@@ -287,6 +287,9 @@ export const cat: Translations = {
   ch_all: 'Tot plegat', chSub_all: 'Necessito una visió completa',
 
   // Planning, insights & settings
+  'priceCouldRise': 'El preu podria ser més alt: comandes similars {price} CHF de mitjana ({rate} CHF/h).',
+  'priceBelowTarget': 'El preu només surt a {rate} CHF/h (objectiu {target}).',
+  'quickMargin': 'Recàrrec',
   'planning': 'Planificació',
   'planningTitle': 'Planificació i capacitat',
   'planningSubtitle': 'Comandes obertes repartides pels dies laborables de l\'equip segons el termini.',

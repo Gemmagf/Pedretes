@@ -273,3 +273,19 @@ export function overallRate(projects: Project[]): number {
   const revenue = done.reduce((a, p) => a + (p.agreedPrice || 0), 0);
   return minutes > 0 ? Math.round((revenue / minutes) * 60) : 0;
 }
+
+/** Hint when an order's agreed price sits below the experience of similar orders or the target rate. */
+export function priceHint(projects: Project[], p: Project, targetRate: number): { kind: 'similar'; price: number; rate: number } | { kind: 'target'; rate: number } | null {
+  if (!p.agreedPrice || p.status === 'Completed') return null;
+  const similar = predictPerStone(projects.filter(x => x.id !== p.id), p.sheetType, { style: p.style, stoneType: p.stoneType, material: p.material, shape: p.shape });
+  if (similar?.pricePerStone && similar.matched.length > 0) {
+    const expected = Math.round(similar.pricePerStone.median * Math.max(1, p.stoneCount || 1));
+    if (p.agreedPrice < expected * 0.9) return { kind: 'similar', price: expected, rate: similar.chfPerHour ?? 0 };
+  }
+  const minutes = p.totalTime || 0;
+  if (minutes > 0) {
+    const rate = Math.round(p.agreedPrice / (minutes / 60));
+    if (rate < targetRate * 0.85) return { kind: 'target', rate };
+  }
+  return null;
+}

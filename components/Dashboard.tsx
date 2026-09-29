@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import {
-  Briefcase, CheckCircle2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Clock, Play, Square,
+  Star, Briefcase, CheckCircle2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Clock, Play, Square,
   FileDown, Search, CalendarDays, AlertTriangle, Trash2, Pencil, Hourglass, Coins, TrendingUp, Users as UsersIcon,
 } from 'lucide-react';
 import type { Project, ProjectStatus, User } from '../types';
@@ -16,7 +16,7 @@ import { useProjects } from '../hooks/useProjects';
 import { exportProjectQuote } from '../utils/pdfExport';
 import { useSettings } from '../context/SettingsContext';
 import { planSchedule } from '../utils/planning';
-import { upcomingDeadlines } from '../utils/analytics';
+import { priceHint, upcomingDeadlines } from '../utils/analytics';
 import { colorFor, daysUntil, fmtClock, fmtDate, fmtMinutes, fmtNumber, statusKey, toISODate } from '../utils/format';
 import { TYPE_LABEL } from '../utils/projectTypes';
 import { Avatar, Button, Card, EmptyState, Field, Kpi, LoadingBlock, Modal, Segmented, StatusBadge } from './ui';
@@ -54,9 +54,9 @@ const DeadlineChip: React.FC<{ deadline?: string; done?: boolean }> = ({ deadlin
 // --- Edit modal --------------------------------------------------------------
 
 const ProjectEditModal: React.FC<{
-  project: Project; users: User[]; onClose: () => void;
+  project: Project; users: User[]; hint?: string | null; onClose: () => void;
   onSave: (p: Project) => Promise<unknown>; onDelete: (p: Project) => Promise<unknown>;
-}> = ({ project, users, onClose, onSave, onDelete }) => {
+}> = ({ project, users, hint, onClose, onSave, onDelete }) => {
   const { t } = useTranslation();
   const { targetRate: HOURLY_RATE } = useSettings();
   const [edited, setEdited] = useState<Project>({ ...project });
@@ -132,6 +132,7 @@ const ProjectEditModal: React.FC<{
             <input type="number" min={0} className="input pl-14 font-serif text-xl font-semibold" value={edited.agreedPrice ?? ''} onChange={e => set('agreedPrice', e.target.value === '' ? undefined : Number(e.target.value))} />
           </div>
           <p className="mt-2 text-xs text-ink-500">{t('estimatedCost', { rate: HOURLY_RATE })}: <span className={`font-semibold ${overPrice ? 'text-red-600' : 'text-ink-800'}`}>{fmtNumber(cost)} CHF</span></p>
+          {hint && <p className="mt-2 flex items-center gap-1.5 text-xs text-gold-700"><Star className="h-3.5 w-3.5 fill-gold-400 text-gold-500" />{hint}</p>}
         </div>
       </div>
     </Modal>
@@ -222,9 +223,9 @@ const useElapsed = (project: Project) => {
 };
 
 const ProjectRow: React.FC<{
-  project: Project; user?: User; workshopName: string;
+  project: Project; user?: User; workshopName: string; hint?: string | null;
   onEdit: () => void; onStart: () => void; onStop: () => void; onStatus: (s: ProjectStatus) => void;
-}> = ({ project, user, workshopName, onEdit, onStart, onStop, onStatus }) => {
+}> = ({ project, user, workshopName, hint, onEdit, onStart, onStop, onStatus }) => {
   const { t } = useTranslation();
   const { targetRate: HOURLY_RATE } = useSettings();
   const [expanded, setExpanded] = useState(false);
@@ -243,6 +244,7 @@ const ProjectRow: React.FC<{
           <p className="truncate text-sm font-semibold text-ink-900">{project.projectName}</p>
           <p className="truncate text-xs text-ink-400">{project.client} · {TYPE_LABEL[project.sheetType]}</p>
         </div>
+        {hint && <span title={hint} className="text-gold-500"><Star className="h-3.5 w-3.5 fill-gold-400" /></span>}
         <div className="hidden sm:block"><DeadlineChip deadline={project.deadline} done={project.status === 'Completed'} /></div>
         {user && <Avatar name={user.name} size="sm" />}
         <StatusBadge status={project.status} />
@@ -286,6 +288,7 @@ const ProjectRow: React.FC<{
                   <p className="text-base font-semibold text-copper-600">{project.agreedPrice ? `${fmtNumber(project.agreedPrice)} CHF` : '—'}</p>
                 </div>
               </div>
+              {hint && <p className="flex items-center gap-1.5 rounded-lg border border-gold-200 bg-gold-50 px-2.5 py-1.5 text-xs text-gold-700"><Star className="h-3.5 w-3.5 fill-gold-400 text-gold-500" />{hint}</p>}
 
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex gap-1 rounded-lg bg-cream-100 p-0.5">
@@ -343,10 +346,23 @@ const Dashboard: React.FC = () => {
 
   const revenue = filtered.filter(p => p.status === 'Completed').reduce((s, p) => s + (p.agreedPrice || 0), 0);
   const counts = {
+    pending: filtered.filter(p => p.status === 'Pending').length,
+    inProgress: filtered.filter(p => p.status === 'In Progress').length,
     open: filtered.filter(p => p.status !== 'Completed').length,
     completed: filtered.filter(p => p.status === 'Completed').length,
     plannedHours: filtered.filter(p => p.status !== 'Completed').reduce((s, p) => s + Math.max(0, (p.totalTime || 0) - (p.actualTime || 0)), 0) / 60,
   };
+  const { targetRate } = useSettings();
+  const hints = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of projects) {
+      if (p.status === 'Completed') continue;
+      const h = priceHint(projects, p, targetRate);
+      if (h?.kind === 'similar') m.set(p.id, t('priceCouldRise', { price: fmtNumber(h.price), rate: fmtNumber(h.rate) }));
+      else if (h?.kind === 'target') m.set(p.id, t('priceBelowTarget', { rate: fmtNumber(h.rate), target: targetRate }));
+    }
+    return m;
+  }, [projects, targetRate, t]);
   const deadlines = useMemo(() => upcomingDeadlines(projects, 6), [projects]);
   const lateIds = useMemo(() => new Set(planSchedule(projects, users, { weeks: 1 }).items.filter(i => i.late).map(i => i.project.id)), [projects, users]);
   const overdueCount = deadlines.filter(p => (daysUntil(p.deadline) ?? 1) < 0).length;
@@ -375,7 +391,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6 pb-10">
       <AnimatePresence>
-        {selected && <ProjectEditModal project={selected} users={users} onClose={() => setSelected(null)} onSave={save} onDelete={del} />}
+        {selected && <ProjectEditModal project={selected} users={users} hint={hints.get(selected.id)} onClose={() => setSelected(null)} onSave={save} onDelete={del} />}
       </AnimatePresence>
 
       {/* Toolbar */}
@@ -396,9 +412,10 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         <Kpi tone="brand" label={t('completedRevenue')} value={<>{fmtNumber(revenue)} <span className="text-base font-sans font-medium opacity-80">CHF</span></>} hint={t('revenueHint')} icon={<Coins className="h-5 w-5" />} />
-        <Kpi label={t('openProjects')} value={counts.open} hint={`${t('projectsInProgress')} · ${t(`filter_${period}`)}`} icon={<Briefcase className="h-5 w-5" />} />
+        <Kpi label={t('pending')} value={counts.pending} hint={t(`filter_${period}`)} icon={<Clock className="h-5 w-5" />} />
+        <Kpi label={t('in_progress')} value={counts.inProgress} hint={t(`filter_${period}`)} icon={<Briefcase className="h-5 w-5" />} />
         <Kpi label={t('completed')} value={counts.completed} hint={t(`filter_${period}`)} icon={<CheckCircle2 className="h-5 w-5" />} />
         <Kpi label={t('hoursPlanned')} value={`${fmtNumber(counts.plannedHours, locale, 1)} h`} hint={t('openProjects')} icon={<Hourglass className="h-5 w-5" />} />
       </div>
@@ -414,7 +431,7 @@ const Dashboard: React.FC = () => {
             ) : (
               <div className="scrollbar-thin max-h-[560px] space-y-2 overflow-y-auto pr-1">
                 {filtered.map(p => (
-                  <ProjectRow key={p.id} project={p} user={userById(p.assignedTo)} workshopName={workshopName}
+                  <ProjectRow key={p.id} project={p} user={userById(p.assignedTo)} workshopName={workshopName} hint={hints.get(p.id)}
                     onEdit={() => setSelected(p)} onStart={() => startTimer(p)} onStop={() => stopTimer(p)} onStatus={s => setStatus(p, s)} />
                 ))}
               </div>

@@ -68,8 +68,18 @@ const SimulatorPanel: React.FC<Props> = ({ config, values, users, projects, onAp
             <label className="label mb-0">{t('difficultyMargin')}</label>
             <span className="font-mono text-xs font-bold text-copper-600">×{margin.toFixed(1)}</span>
           </div>
-          <input type="range" min="1" max="2" step="0.1" value={margin} onChange={e => setMargin(parseFloat(e.target.value))} className="w-full" />
-          <div className="mt-1 flex justify-between text-[10px] uppercase tracking-wider text-ink-400"><span>{t('standard')}</span><span>{t('complex')}</span></div>
+          <input type="range" min="1" max="2" step="0.05" value={margin} onChange={e => setMargin(parseFloat(e.target.value))} className="w-full" />
+          <div className="mt-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-wider text-ink-400">
+            <span>{t('standard')}</span>
+            <span className="flex gap-1 normal-case tracking-normal">
+              {[1, 1.05, 1.1, 1.2, 1.5].map(m => (
+                <button key={m} onClick={() => setMargin(m)} className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold transition ${Math.abs(margin - m) < 0.001 ? 'bg-copper-600 text-white' : 'bg-cream-100 text-ink-600 hover:bg-gold-100'}`}>
+                  {m === 1 ? '±0' : `+${Math.round((m - 1) * 100)}%`}
+                </button>
+              ))}
+            </span>
+            <span>{t('complex')}</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">

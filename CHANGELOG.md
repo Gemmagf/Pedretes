@@ -62,7 +62,12 @@ Registre de l'evolució del projecte per sessions de treball.
 - Barra lateral agrupada (Übersicht/Analyse · Neuer Auftrag · Team) amb comptador de temporitzadors actius, capçalera per pàgina i disseny mòbil amb calaix.
 - Landing amb hero fosc i vista prèvia de l'app, login a dues columnes (panell de marca + formulari), barra lateral fosca amb accents d'or, KPI principal en fosc, calendari amb barres contínues per projecte, transicions entre pàgines i targetes amb accent de color per tipus.
 
+### Revisió del brief original (AI Studio, README inicial, Coses.txt, CHANGELOG sessions 3–4)
+- Cobert: formularis integrats, calendari filtrable per període i persona amb colors per projecte, KPI filtrables, llista scrollable, edició del projecte amb estat, temps dedicat, compte enrere del termini, preu acordat, proposta de data segons càrrega real (ni sobrecompromís ni temps mort), preu basat en preus anteriors, simulador amb augment in situ, evolució d'ingressos a «Gesamt», historial inicial (305 comandes reals), «no es mostren tots els projectes» (Coses.txt) resolt.
+- Tancat en aquesta sessió: asterisc «el preu es podria apujar» a la fila i al modal quan el preu queda per sota de comandes similars o de la tarifa objectiu; KPI d'Ausstehend i In Bearbeitung separades; botons ràpids d'augment (+5/+10/+20/+50 %) al simulador.
+
 ### Pendent
+- [ ] Pregunta B2B/B2C al qüestionari de la demo (idea de la sessió 4).
 - [ ] Activar Pages al repositori (Settings → Pages → Source: GitHub Actions) i fer merge a `main`.
 - [ ] Restringir les RLS de Supabase a usuaris autenticats.
 - [ ] Imatge `og:image` per compartir a xarxes.

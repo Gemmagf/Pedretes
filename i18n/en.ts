@@ -287,6 +287,9 @@ export const en: Translations = {
   ch_all: 'All of it', chSub_all: 'I need a complete overview',
 
   // Planning, insights & settings
+  'priceCouldRise': 'Price could be higher: similar orders avg. {price} CHF ({rate} CHF/h).',
+  'priceBelowTarget': 'Price yields only {rate} CHF/h (target {target}).',
+  'quickMargin': 'Markup',
   'planning': 'Planning',
   'planningTitle': 'Planning & capacity',
   'planningSubtitle': 'Open orders spread over the team\'s working days by deadline.',

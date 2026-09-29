@@ -301,6 +301,9 @@ export const de = {
   ch_all: 'Alles davon', chSub_all: 'Ich brauche einen vollständigen Überblick',
 
   // Planning, insights & settings
+  'priceCouldRise': 'Preis könnte höher sein: ähnliche Aufträge Ø {price} CHF ({rate} CHF/h).',
+  'priceBelowTarget': 'Preis ergibt nur {rate} CHF/h (Ziel {target}).',
+  'quickMargin': 'Aufschlag',
   'planning': 'Planung',
   'planningTitle': 'Planung & Kapazität',
   'planningSubtitle': 'Offene Aufträge nach Liefertermin auf die Arbeitstage des Teams verteilt.',
