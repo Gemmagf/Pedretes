@@ -146,7 +146,7 @@ const CRAFT_CONFIG: Record<CraftType, {
 };
 
 const TEAM_NAMES: Record<TeamSize, string[]> = {
-  solo: ['Ich'],
+  solo: ['Sarah'],
   small: ['Sarah', 'Thomas'],
   medium: ['Sarah', 'Thomas', 'Laura', 'Marco'],
   large: ['Sarah', 'Thomas', 'Laura', 'Marco', 'Anna', 'Felix'],
@@ -176,7 +176,7 @@ function daysAhead(n: number): string {
   return d.toISOString().split('T')[0];
 }
 
-export function generateDemoProjects(answers: DemoAnswers): Project[] {
+export function generateDemoProjects(answers: DemoAnswers, users: User[] = []): Project[] {
   const cfg = CRAFT_CONFIG[answers.craft];
   const projects: Project[] = [];
 
@@ -189,7 +189,7 @@ export function generateDemoProjects(answers: DemoAnswers): Project[] {
       : status === 'In Progress' ? rand(0, Math.round(totalTime * 0.6))
       : 0;
     const agreedPrice = rand(80, 1200);
-    const daysOld = rand(5, 300);
+    const daysOld = i < 5 ? rand(0, 6) : rand(5, 300);
 
     projects.push({
       id: `demo-${i}`,
@@ -197,9 +197,9 @@ export function generateDemoProjects(answers: DemoAnswers): Project[] {
       client: cfg.clients[i % cfg.clients.length],
       sheetType,
       status,
-      assignedTo: undefined,
+      assignedTo: users.length ? users[i % users.length].id : undefined,
       date: daysAgo(daysOld),
-      deadline: status !== 'Completed' ? daysAhead(rand(3, 45)) : undefined,
+      deadline: status !== 'Completed' ? daysAhead(rand(-4, 45)) : undefined,
       stoneCount: rand(1, 12),
       timePerStone: rand(3, 15),
       totalTime,

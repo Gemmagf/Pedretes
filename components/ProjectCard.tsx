@@ -1,83 +1,46 @@
 import React from 'react';
-import { Project } from '../types';
+import { CalendarDays, Clock, Gem, FileDown, User as UserIcon } from 'lucide-react';
+import type { Project } from '../types';
 import { useTranslation } from '../context/LanguageContext';
-import { Calendar, Clock, Tag, FileDown } from 'lucide-react';
 import { exportProjectQuote } from '../utils/pdfExport';
+import { fmtDate, fmtMinutes, fmtNumber } from '../utils/format';
+import { TYPE_LABEL } from '../utils/projectTypes';
+import { StatusBadge } from './ui';
 
-interface ProjectCardProps {
-  project: Project;
-  color?: string;
-  key?: string;
-}
-
-const ProjectCard: React.FC<ProjectCardProps> = ({ project, color }) => {
-  const { t } = useTranslation();
-
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'completed': return 'bg-green-100 text-green-700 border-green-200';
-      case 'in progress': return 'bg-blue-100 text-blue-700 border-blue-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
+const ProjectCard: React.FC<{ project: Project; assignedName?: string; workshopName?: string; onClick?: () => void }> = ({ project, assignedName, workshopName, onClick }) => {
+  const { t, locale } = useTranslation();
+  const meta = [
+    project.totalTime ? { icon: <Clock className="h-3.5 w-3.5" />, text: fmtMinutes(project.actualTime && project.actualTime > 0 ? project.actualTime : project.totalTime) } : null,
+    project.stoneCount ? { icon: <Gem className="h-3.5 w-3.5" />, text: `${project.stoneCount} ${project.stoneType ?? ''}`.trim() } : null,
+    { icon: <CalendarDays className="h-3.5 w-3.5" />, text: project.deadline ? fmtDate(project.deadline, locale, { day: '2-digit', month: 'short' }) : fmtDate(project.date, locale, { day: '2-digit', month: 'short' }) },
+    assignedName ? { icon: <UserIcon className="h-3.5 w-3.5" />, text: assignedName } : null,
+  ].filter(Boolean) as { icon: React.ReactNode; text: string }[];
 
   return (
-    <div
-      className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200 overflow-hidden"
-      style={{ borderLeft: `4px solid ${color || '#fbbf24'}` }}
-    >
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <div className="flex-1 min-w-0 pr-2">
-            <span className="text-xs font-semibold tracking-wider text-gray-500 uppercase">{project.sheetType}</span>
-            <h3 className="text-lg font-serif font-semibold text-gray-800 leading-tight truncate">{project.projectName}</h3>
-            <p className="text-sm text-gray-500">{project.client}</p>
-          </div>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${getStatusColor(project.status)}`}>
-            {t(project.status?.toLowerCase().replace(' ', '_') || 'pending')}
-          </span>
+    <article className="card group flex flex-col p-4 transition-shadow hover:shadow-lift">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="kicker">{TYPE_LABEL[project.sheetType]}</p>
+          <h3 className="mt-0.5 truncate font-serif text-base font-semibold text-ink-900">{project.projectName}</h3>
+          <p className="truncate text-sm text-ink-500">{project.client}</p>
         </div>
+        <StatusBadge status={project.status} />
+      </div>
 
-        <div className="grid grid-cols-2 gap-2 mt-3 text-sm text-gray-600">
-          {project.totalTime && (
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-amber-500" />
-              <span>{Math.round(project.totalTime)} min</span>
-            </div>
-          )}
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-500">
+        {meta.map((m, i) => <span key={i} className="inline-flex items-center gap-1">{m.icon}{m.text}</span>)}
+      </div>
 
-          {(project.agreedPrice || 0) > 0 && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-emerald-500 font-medium text-sm">CHF</span>
-              <span>{project.agreedPrice?.toLocaleString('de-CH')}</span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-blue-400" />
-            <span>{new Date(project.date).toLocaleDateString('de-CH')}</span>
-          </div>
-
-          {project.stoneCount && (
-            <div className="flex items-center gap-1.5">
-              <Tag className="w-4 h-4 text-purple-400" />
-              <span>{project.stoneCount} Stk.</span>
-            </div>
-          )}
-        </div>
-
-        {/* Export button */}
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <button
-            onClick={() => exportProjectQuote(project)}
-            className="flex items-center gap-2 text-xs font-medium text-amber-700 hover:text-amber-900 hover:bg-amber-50 px-3 py-1.5 rounded-lg transition-colors w-full justify-center border border-amber-200 hover:border-amber-400"
-          >
-            <FileDown className="w-3.5 h-3.5" />
-            Offerte exportieren (PDF)
+      <div className="mt-3 flex items-center justify-between border-t border-cream-200 pt-3">
+        <span className="font-serif text-lg font-semibold text-copper-600">{project.agreedPrice ? `${fmtNumber(project.agreedPrice)} CHF` : '—'}</span>
+        <div className="flex gap-1">
+          {onClick && <button onClick={onClick} className="rounded-lg px-2 py-1 text-xs font-semibold text-ink-500 hover:bg-cream-100 hover:text-ink-900">{t('edit')}</button>}
+          <button onClick={() => exportProjectQuote(project, workshopName)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-copper-600 hover:bg-gold-50" title={t('pdfQuote')}>
+            <FileDown className="h-3.5 w-3.5" /> PDF
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 };
 

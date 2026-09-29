@@ -4,6 +4,59 @@ Registre de l'evolució del projecte per sessions de treball.
 
 ---
 
+## Sessió 5 — 2026-09-29
+
+**Objectiu:** Publicar a GitHub Pages, fer que l'app funcioni sense backend (accés local Sara/sareta com a Caleta Tracker), completar el mode demo, corregir bugs i redissenyar la UI.
+
+### Desplegament i infraestructura
+- **GitHub Pages** via `.github/workflows/deploy.yml` (typecheck + build + deploy a cada push a `main`); `ci.yml` per a branques i PRs.
+- `vite.config.ts`: `base: './'` (funciona a Pages, Vercel i local), chunks separats (react, charts, motion, supabase, pdf). Eliminat el codi residual de Gemini/AI Studio.
+- `index.html`: favicon SVG propi, meta description, Open Graph, `theme-color`, preconnect de fonts.
+- Fitxers morts eliminats: `tailwind.config.js` (Tailwind v4 no el llegeix), `metadata.json`, `text.txt`, `services/sheetsAPI.ts`, dependència `axios`.
+- `scripts/`: credencials des de variables d'entorn (abans hi havia una contrasenya d'admin hardcodejada).
+- `@types/react` instal·lats; `npm run typecheck` passa net.
+
+### Capa de dades unificada
+- Nova interfície `Store` (`services/store.ts`) amb tres implementacions: **Supabase**, **local** (persistit a `localStorage`, clau `pedretes.local.v1`) i **demo** (memòria). Cada escriptura emet un esdeveniment i totes les vistes es refresquen.
+- `DataContext` escull el backend; `useProjects()` i `useUsers()` són l'única via d'accés dels components.
+- **Accés local**: usuari `Sara` / contrasenya `sareta`, sessió persistida, dades d'exemple realistes (`utils/localSeed.ts`, PRNG determinista) i **exportació/importació JSON** i restauració des de la pàgina Team.
+- **Supabase opcional**: si no hi ha variables d'entorn, el client no s'instancia i l'app arrenca igualment (abans la pàgina quedava en blanc).
+
+### Mode demo complet
+- Analítiques amb dades sintètiques (abans mostrava dades de Supabase).
+- Els formularis creen comandes a la demo; predicció intel·ligent i simulador usen les dades de demo.
+- Les comandes de demo tenen persona assignada (abans la gràfica de càrrega quedava buida).
+
+### Bugs corregits
+- Fonts: `@theme` usava `--font-family-*` (sintaxi antiga) i Playfair/Inter no s'aplicaven mai.
+- FormAlliance: `p.completed` (camp inexistent) i barreja de minuts/hores al càlcul de data.
+- FormPave: el camp `fixierung` mai es guardava (`fixation` al model) i la data suggerida s'escrivia a `date` en lloc de `deadline`.
+- Clau de traducció `fixierung` inexistent; textos hardcodejats en català/alemany a Dashboard, SmartPrediction, FormFassung, Login, Landing i Qüestionari.
+- Gradient SVG del logo amb id duplicat (es veia negre a la barra lateral).
+
+### Millores funcionals
+- **Data d'entrega segons capacitat** (`utils/scheduling.ts`): dies laborables, dies lliures, hores/dia i cua de feina de la persona assignada.
+- Simulador amb desglossament de preu (mà d'obra / pedres), preu de l'or editable amb origen (live/cau/referència/manual) i botó «Übernehmen».
+- Un únic `ProjectFormPage` per als tres tipus, configurat a `utils/projectTypes.ts` (abans 3 fitxers duplicats de ~290 línies).
+- Taulell: cerca, filtre d'estat, canvi d'estat des de la fila, propers terminis amb retard, KPI d'hores planificades, esborrat de projectes, calendari localitzat.
+- Analítiques: rendiment per persona, recomanació de retards, mesos sense dades a zero.
+- Equip: hores setmanals editables, capacitat/dia visible.
+- Toasts de confirmació, ErrorBoundary, tancament de modals amb Escape.
+- i18n tipada (`i18n/de.ts` és la font de veritat; en/cat han de tenir les mateixes claus) i idioma persistit.
+
+### UI
+- Nou sistema de disseny (`index.css`): paleta crema/tinta amb or antic i coure, ombres suaves, tokens Tailwind v4, estats de focus visibles, `prefers-reduced-motion`.
+- Primitives a `components/ui` (Button, Card, Field, Modal, StatusBadge, Kpi, Segmented, Avatar, EmptyState).
+- Barra lateral agrupada (Übersicht/Analyse · Neuer Auftrag · Team) amb comptador de temporitzadors actius, capçalera per pàgina i disseny mòbil amb calaix.
+- Landing amb selector d'idioma, vista prèvia de l'app i login unificat (usuari o correu).
+
+### Pendent
+- [ ] Activar Pages al repositori (Settings → Pages → Source: GitHub Actions) i fer merge a `main`.
+- [ ] Restringir les RLS de Supabase a usuaris autenticats.
+- [ ] Imatge `og:image` per compartir a xarxes.
+
+---
+
 ## Sessió 4 — 2026-04-30
 
 **Objectiu:** Deploy a Vercel, correcció de bugs de producció, landing page pública i mode demo amb qüestionari.

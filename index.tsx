@@ -2,15 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-
-console.log('[Pedretes] VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL ? '✓ OK' : '✗ MISSING');
-console.log('[Pedretes] VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? '✓ OK' : '✗ MISSING');
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const rootElement = document.getElementById('root');
-if (!rootElement) throw new Error("No s'ha trobat el element #root");
+if (!rootElement) throw new Error('Root element #root not found');
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );

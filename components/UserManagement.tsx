@@ -1,305 +1,226 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { UserPlus, ChevronDown, ChevronUp, X, KeyRound, Eye, EyeOff, ShieldCheck, Database, Download, Upload, RotateCcw, Users } from 'lucide-react';
+import type { User } from '../types';
 import { useUsers } from '../context/UsersContext';
 import { useTranslation } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
+import { useToast } from '../context/ToastContext';
 import { changePassword } from '../services/auth';
-import { motion, AnimatePresence } from 'framer-motion';
-import { UserPlus, ChevronDown, ChevronUp, X, KeyRound, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import type { DataSnapshot } from '../services/store';
+import { hoursPerDay } from '../utils/scheduling';
+import { fmtDate, fmtNumber } from '../utils/format';
+import { Avatar, Button, Card, Field } from './ui';
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
-const DAY_NUMS = [1, 2, 3, 4, 5, 6, 0]; // 0=Sun, 1=Mon...
+const DAY_NUMS = [1, 2, 3, 4, 5, 6, 0];
+
+// --- Password (Supabase accounts only) ---------------------------------------
 
 const ChangePasswordCard: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
-  const [currentSection, setCurrentSection] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
-  const handleChange = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
-
-    if (newPassword.length < 6) {
-      setError('Das Passwort muss mindestens 6 Zeichen lang sein.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('Die Passwörter stimmen nicht überein.');
-      return;
-    }
-
+    if (pw.length < 6) return setError(t('passwordMin'));
+    if (pw !== pw2) return setError(t('passwordMismatch'));
     setLoading(true);
-    try {
-      await changePassword(newPassword);
-      setSuccess('Passwort erfolgreich geändert.');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (err: any) {
-      setError(err?.message ?? 'Ein Fehler ist aufgetreten.');
-    } finally {
-      setLoading(false);
-    }
+    try { await changePassword(pw); toast(t('passwordSaved')); setPw(''); setPw2(''); setOpen(false); }
+    catch (err: any) { setError(err?.message ?? t('errorGeneric')); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-jewelry-gold/20 overflow-hidden">
-      <button
-        onClick={() => setCurrentSection(v => !v)}
-        className="w-full flex items-center gap-4 p-5 border-b border-gray-100 bg-amber-50/30 hover:bg-amber-50/60 transition-colors"
-      >
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white flex-shrink-0">
-          <KeyRound className="w-5 h-5" />
-        </div>
-        <div className="flex-1 text-left">
-          <p className="font-semibold text-gray-800">Passwort ändern</p>
-          <p className="text-xs text-gray-400">{user?.email}</p>
-        </div>
-        {currentSection
-          ? <ChevronUp className="w-4 h-4 text-gray-400" />
-          : <ChevronDown className="w-4 h-4 text-gray-400" />}
+    <Card bodyClassName="">
+      <button onClick={() => setOpen(v => !v)} className="flex w-full items-center gap-4 p-5 text-left hover:bg-cream-50" aria-expanded={open}>
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sky-700"><KeyRound className="h-5 w-5" /></span>
+        <span className="flex-1"><span className="block font-semibold text-ink-900">{t('changePassword')}</span><span className="block text-xs text-ink-400">{user?.email}</span></span>
+        {open ? <ChevronUp className="h-4 w-4 text-ink-400" /> : <ChevronDown className="h-4 w-4 text-ink-400" />}
       </button>
-
       <AnimatePresence>
-        {currentSection && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <form onSubmit={handleChange} className="p-5 space-y-4 bg-white">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Neues Passwort</label>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <form onSubmit={submit} className="space-y-4 border-t border-cream-200 p-5">
+              <Field label={t('newPassword')}>
                 <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={e => setNewPassword(e.target.value)}
-                    placeholder="Mindestens 6 Zeichen"
-                    className="w-full px-4 py-2.5 pr-10 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-jewelry-gold focus:bg-white outline-none transition text-sm"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  <input type={show ? 'text' : 'password'} value={pw} onChange={e => setPw(e.target.value)} placeholder={t('passwordPlaceholder')} className="input pr-10" required />
+                  <button type="button" onClick={() => setShow(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700">{show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Passwort bestätigen</label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Passwort wiederholen"
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-jewelry-gold focus:bg-white outline-none transition text-sm"
-                  required
-                />
-              </div>
-
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl px-4 py-3">{error}</div>
-              )}
-              {success && (
-                <div className="bg-green-50 border border-green-200 text-green-700 text-xs rounded-xl px-4 py-3 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4" />
-                  {success}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition disabled:opacity-60"
-              >
-                {loading ? 'Speichern...' : 'Passwort speichern'}
-              </button>
+              </Field>
+              <Field label={t('confirmPassword')}>
+                <input type={show ? 'text' : 'password'} value={pw2} onChange={e => setPw2(e.target.value)} placeholder={t('repeatPassword')} className="input" required />
+              </Field>
+              {error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{error}</p>}
+              <Button type="submit" loading={loading} icon={<ShieldCheck className="h-4 w-4" />}>{t('savePassword')}</Button>
             </form>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </Card>
   );
 };
 
-const UserManagement = () => {
+// --- Local data backup --------------------------------------------------------
+
+const DataCard: React.FC = () => {
   const { t } = useTranslation();
-  const { users, addUser, updateUserHours, updateUserAvailability } = useUsers();
-  const [newName, setNewName] = useState('');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [newDayOff, setNewDayOff] = useState('');
+  const { store } = useData();
+  const { toast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const toggleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id);
-
-  const toggleWorkingDay = (userId: string, dayNum: number, currentDays: number[], daysOff: string[]) => {
-    const next = currentDays.includes(dayNum)
-      ? currentDays.filter(d => d !== dayNum)
-      : [...currentDays, dayNum].sort();
-    updateUserAvailability(userId, next, daysOff);
+  const exportJson = () => {
+    const snapshot = store.exportSnapshot!();
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `pedretes-backup-${new Date().toISOString().substring(0, 10)}.json`; a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const addDayOff = (userId: string, workingDays: number[], daysOff: string[]) => {
-    if (!newDayOff || daysOff.includes(newDayOff)) return;
-    updateUserAvailability(userId, workingDays, [...daysOff, newDayOff].sort());
+  const importJson = async (file: File) => {
+    try {
+      const snapshot = JSON.parse(await file.text()) as DataSnapshot;
+      store.importSnapshot!(snapshot);
+      toast(t('importSuccess', { projects: snapshot.projects.length, users: snapshot.users.length }));
+    } catch { toast(t('importError'), 'error'); }
+  };
+
+  const reset = () => { if (window.confirm(t('resetConfirm'))) { store.reset!(); toast(t('projectUpdated'), 'info'); } };
+
+  return (
+    <Card title={t('dataTitle')} icon={<Database className="h-5 w-5" />}>
+      <p className="mb-4 text-sm text-ink-500">{t('dataLocalHint')}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" size="sm" onClick={exportJson} icon={<Download className="h-4 w-4" />}>{t('exportData')}</Button>
+        <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()} icon={<Upload className="h-4 w-4" />}>{t('importData')}</Button>
+        <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) importJson(f); e.target.value = ''; }} />
+        <Button variant="ghost" size="sm" onClick={reset} icon={<RotateCcw className="h-4 w-4" />} className="text-ink-500">{t('resetData')}</Button>
+      </div>
+    </Card>
+  );
+};
+
+// --- Team ---------------------------------------------------------------------
+
+const UserRow: React.FC<{ user: User; expanded: boolean; onToggle: () => void; onUpdate: (patch: Partial<User>) => void }> = ({ user, expanded, onToggle, onUpdate }) => {
+  const { t, locale } = useTranslation();
+  const [newDayOff, setNewDayOff] = useState('');
+
+  const toggleDay = (n: number) => {
+    const next = user.workingDays.includes(n) ? user.workingDays.filter(d => d !== n) : [...user.workingDays, n].sort();
+    onUpdate({ workingDays: next });
+  };
+  const addDayOff = () => {
+    if (!newDayOff || user.daysOff.includes(newDayOff)) return;
+    onUpdate({ daysOff: [...user.daysOff, newDayOff].sort() });
     setNewDayOff('');
   };
 
-  const removeDayOff = (userId: string, workingDays: number[], daysOff: string[], day: string) => {
-    updateUserAvailability(userId, workingDays, daysOff.filter(d => d !== day));
-  };
-
   return (
-    <div className="max-w-2xl mx-auto space-y-4 pb-10">
-      {/* Change Password */}
-      <ChangePasswordCard />
+    <li>
+      <button onClick={onToggle} className="flex w-full items-center gap-4 p-4 text-left hover:bg-cream-50" aria-expanded={expanded}>
+        <Avatar name={user.name} size="lg" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold text-ink-900">{user.name}</span>
+          <span className="block truncate text-xs text-ink-400">
+            {user.workingDays.map(d => t(DAY_KEYS[DAY_NUMS.indexOf(d)])).join(' · ')}
+            {' · '}{t('capacityPerDay', { hours: fmtNumber(hoursPerDay(user), locale, 1) })}
+            {user.daysOff.length > 0 && ` · ${user.daysOff.length} ${t('freeDaysLabel')}`}
+          </span>
+        </span>
+        {expanded ? <ChevronUp className="h-4 w-4 text-ink-400" /> : <ChevronDown className="h-4 w-4 text-ink-400" />}
+      </button>
 
-      {/* Team Management */}
-      <div className="bg-white rounded-2xl shadow-sm border border-jewelry-gold/20 overflow-hidden">
-        <div className="p-5 border-b border-gray-100 bg-amber-50/30">
-          <h3 className="font-serif font-bold text-xl text-jewelry-copper">{t('userManagement')}</h3>
-        </div>
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="space-y-5 border-t border-cream-200 bg-cream-50/60 p-4">
+              <div className="grid grid-cols-2 gap-3 sm:max-w-xs">
+                <Field label={t('hoursPerWeek')}>
+                  <input type="number" min={0} max={80} className="input" value={user.baseHours} onChange={e => onUpdate({ baseHours: Number(e.target.value) || 0 })} />
+                </Field>
+                <Field label={t('extraHours')}>
+                  <input type="number" min={0} max={40} className="input" value={user.extraHours} onChange={e => onUpdate({ extraHours: Number(e.target.value) || 0 })} />
+                </Field>
+              </div>
 
-        <div className="divide-y divide-gray-100">
-          {users.map(user => (
-            <div key={user.id}>
-              {/* User Row */}
-              <div
-                className="flex items-center gap-4 p-4 hover:bg-amber-50/30 transition-colors cursor-pointer"
-                onClick={() => toggleExpand(user.id)}
-              >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-jewelry-copper to-jewelry-bronze flex items-center justify-center text-white font-bold text-lg shadow-sm flex-shrink-0">
-                  {user.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800">{user.name}</p>
-                  <p className="text-xs text-gray-400">
-                    {user.workingDays.map(d => t(DAY_KEYS[DAY_NUMS.indexOf(d)])).join(' · ')}
-                    {user.daysOff.length > 0 && ` · ${user.daysOff.length} ${t('freeDaysLabel')}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-xs text-gray-400">{t('extraHours')}</p>
-                    <input
-                      type="number"
-                      min={0}
-                      className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-center text-sm focus:ring-2 focus:ring-jewelry-gold outline-none"
-                      value={user.extraHours}
-                      onClick={e => e.stopPropagation()}
-                      onChange={e => updateUserHours(user.id, Number(e.target.value))}
-                    />
-                  </div>
-                  {expandedId === user.id
-                    ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+              <div>
+                <p className="label">{t('workingDays')}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {DAY_KEYS.map((key, i) => {
+                    const active = user.workingDays.includes(DAY_NUMS[i]);
+                    return (
+                      <button key={key} onClick={() => toggleDay(DAY_NUMS[i])} aria-pressed={active}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${active ? 'bg-copper-600 text-white shadow-sm' : 'border border-cream-300 bg-white text-ink-400 hover:border-gold-400'}`}>
+                        {t(key)}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Expanded Availability */}
-              <AnimatePresence>
-                {expandedId === user.id && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="p-4 bg-amber-50/20 border-t border-amber-100 space-y-4">
-                      {/* Working Days */}
-                      <div>
-                        <p className="text-xs font-bold uppercase text-gray-500 mb-2">{t('workingDays')}</p>
-                        <div className="flex gap-2 flex-wrap">
-                          {DAY_KEYS.map((key, i) => {
-                            const num = DAY_NUMS[i];
-                            const active = user.workingDays.includes(num);
-                            return (
-                              <button
-                                key={key}
-                                onClick={() => toggleWorkingDay(user.id, num, user.workingDays, user.daysOff)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                  active
-                                    ? 'bg-jewelry-copper text-white shadow-sm'
-                                    : 'bg-white text-gray-400 border border-gray-200 hover:border-jewelry-gold'
-                                }`}
-                              >
-                                {t(key)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Days Off */}
-                      <div>
-                        <p className="text-xs font-bold uppercase text-gray-500 mb-2">{t('daysOff')}</p>
-                        <div className="flex gap-2 mb-2">
-                          <input
-                            type="date"
-                            value={newDayOff}
-                            onChange={e => setNewDayOff(e.target.value)}
-                            className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-jewelry-gold outline-none bg-white"
-                          />
-                          <button
-                            onClick={() => addDayOff(user.id, user.workingDays, user.daysOff)}
-                            className="px-4 py-1.5 bg-jewelry-copper text-white rounded-lg text-sm font-medium hover:bg-jewelry-bronze transition"
-                          >
-                            {t('addDayOff')}
-                          </button>
-                        </div>
-                        {user.daysOff.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {user.daysOff.map(day => (
-                              <span
-                                key={day}
-                                className="flex items-center gap-1.5 bg-white border border-red-200 text-red-600 text-xs px-2.5 py-1 rounded-full"
-                              >
-                                {new Date(day + 'T12:00:00').toLocaleDateString('de-CH', { day: '2-digit', month: 'short' })}
-                                <button
-                                  onClick={() => removeDayOff(user.id, user.workingDays, user.daysOff, day)}
-                                  className="hover:text-red-800"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
+              <div>
+                <p className="label">{t('daysOff')}</p>
+                <div className="mb-2 flex gap-2">
+                  <input type="date" value={newDayOff} onChange={e => setNewDayOff(e.target.value)} className="input max-w-[200px]" />
+                  <Button size="sm" onClick={addDayOff} disabled={!newDayOff}>{t('addDayOff')}</Button>
+                </div>
+                {user.daysOff.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {user.daysOff.map(day => (
+                      <span key={day} className="inline-flex items-center gap-1.5 rounded-full border border-rosegold-400/50 bg-white px-2.5 py-1 text-xs text-rosegold-500">
+                        {fmtDate(day, locale, { day: '2-digit', month: 'short', year: '2-digit' })}
+                        <button onClick={() => onUpdate({ daysOff: user.daysOff.filter(d => d !== day) })} className="hover:text-red-700" aria-label={t('delete')}><X className="h-3 w-3" /></button>
+                      </span>
+                    ))}
+                  </div>
                 )}
-              </AnimatePresence>
+              </div>
             </div>
-          ))}
-        </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </li>
+  );
+};
 
-        {/* Add User */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex gap-3">
-          <input
-            type="text"
-            className="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-jewelry-gold outline-none bg-white"
-            placeholder={t('newUser')}
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) { addUser(newName); setNewName(''); } }}
-          />
-          <button
-            className="flex items-center gap-2 px-5 py-2 bg-jewelry-copper text-white rounded-lg hover:bg-jewelry-bronze transition text-sm font-medium shadow-sm"
-            onClick={() => { if (newName.trim()) { addUser(newName); setNewName(''); } }}
-          >
-            <UserPlus className="w-4 h-4" />
-            {t('addUser')}
-          </button>
+const UserManagement: React.FC = () => {
+  const { t } = useTranslation();
+  const { users, addUser, updateUser } = useUsers();
+  const { user: authUser } = useAuth();
+  const { store } = useData();
+  const [newName, setNewName] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const submitNew = () => { if (newName.trim()) { addUser(newName); setNewName(''); } };
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5 pb-10">
+      <Card title={t('userManagement')} icon={<Users className="h-5 w-5" />} bodyClassName=""
+        action={<span className="rounded-full bg-cream-100 px-2.5 py-0.5 text-xs font-bold text-ink-700">{users.length}</span>}>
+        <ul className="divide-y divide-cream-200">
+          {users.map(u => (
+            <UserRow key={u.id} user={u} expanded={expandedId === u.id} onToggle={() => setExpandedId(prev => (prev === u.id ? null : u.id))} onUpdate={patch => updateUser(u.id, patch)} />
+          ))}
+        </ul>
+        <div className="flex gap-2 border-t border-cream-200 bg-cream-50 p-4">
+          <input className="input" placeholder={t('newUser')} value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') submitNew(); }} />
+          <Button onClick={submitNew} icon={<UserPlus className="h-4 w-4" />} disabled={!newName.trim()} className="shrink-0">{t('addUser')}</Button>
         </div>
-      </div>
+      </Card>
+
+      {store.kind === 'local' && <DataCard />}
+      {authUser?.provider === 'supabase' && <ChangePasswordCard />}
     </div>
   );
 };

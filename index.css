@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
 @theme {
-  --font-family-serif: "Playfair Display", serif;
-  --font-family-sans: "Inter", sans-serif;
+  --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --color-jewelry-gold: #ffd700;
-  --color-jewelry-copper: #b87333;
-  --color-jewelry-rosegold: #b76e79;
-  --color-jewelry-bronze: #cd7f32;
-  --color-jewelry-brass: #b5a642;
+  /* Warm neutrals */
+  --color-cream-50: #FCFAF6;
+  --color-cream-100: #F6F1E8;
+  --color-cream-200: #EDE5D6;
+  --color-cream-300: #DDD2BE;
+
+  --color-ink-900: #1E1A15;
+  --color-ink-800: #2C2620;
+  --color-ink-700: #4A423A;
+  --color-ink-500: #7A7067;
+  --color-ink-400: #9C928A;
+  --color-ink-300: #B8AFA4;
+  --color-ink-200: #D6CFC6;
+
+  /* Brand: antique gold + copper */
+  --color-gold-50: #FBF6E9;
+  --color-gold-100: #F4E8C8;
+  --color-gold-200: #E8D49B;
+  --color-gold-300: #D9BC6A;
+  --color-gold-400: #C9A24D;
+  --color-gold-500: #B8902F;
+  --color-gold-600: #98741F;
+  --color-gold-700: #785A16;
+
+  --color-copper-50: #FBF1EA;
+  --color-copper-100: #F4DDCB;
+  --color-copper-200: #E8C3A5;
+  --color-copper-300: #D9A47E;
+  --color-copper-400: #C08355;
+  --color-copper-500: #A8663A;
+  --color-copper-600: #8E5330;
+  --color-copper-700: #6F4025;
+
+  --color-rosegold-400: #C98A93;
+  --color-rosegold-500: #B76E79;
+
+  --shadow-soft: 0 1px 2px rgb(30 26 21 / 0.04), 0 4px 16px -4px rgb(30 26 21 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(30 26 21 / 0.06), 0 12px 32px -8px rgb(30 26 21 / 0.18);
+
+  --animate-fade-in-up: fade-in-up 0.3s ease-out both;
+  --animate-fade-in: fade-in 0.2s ease-out both;
+
+  @keyframes fade-in-up {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
 }
 
-@keyframes fade-in-up {
-  0% { opacity: 0; transform: translateY(10px); }
-  100% { opacity: 1; transform: translateY(0); }
+@layer base {
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  body { @apply bg-cream-50 text-ink-900 font-sans; }
+  h1, h2, h3 { @apply font-serif; }
+  ::selection { background: var(--color-gold-200); color: var(--color-ink-900); }
+
+  :focus-visible { outline: 2px solid var(--color-gold-500); outline-offset: 2px; border-radius: 4px; }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { opacity: 0.5; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
 }
 
-.animate-fade-in-up {
-  animation: fade-in-up 0.3s ease-out;
+@layer components {
+  .input {
+    @apply w-full rounded-xl border border-cream-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-300
+      transition-[border-color,box-shadow] focus:border-gold-400 focus:ring-4 focus:ring-gold-100 focus:outline-none
+      disabled:cursor-not-allowed disabled:bg-cream-100 disabled:text-ink-400;
+  }
+  select.input { @apply cursor-pointer pr-9 appearance-none bg-no-repeat bg-[right_0.75rem_center] bg-[length:1rem_1rem]; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%237A7067' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); }
+
+  .card { @apply rounded-2xl border border-cream-200 bg-white shadow-soft; }
+  .label { @apply mb-1.5 block text-xs font-semibold tracking-wide text-ink-700; }
+  .kicker { @apply text-[11px] font-bold uppercase tracking-[0.14em] text-ink-400; }
 }
 
+.scrollbar-thin { scrollbar-width: thin; scrollbar-color: var(--color-cream-300) transparent; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: #f1f1f1; }
-::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-cream-300); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-300); }
+
+/* Range slider with brand accent */
+input[type="range"] { accent-color: var(--color-gold-500); }

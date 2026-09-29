@@ -1,35 +1,48 @@
-// Preu de l'or en temps real (CHF per gram)
-// Font: metals.live (USD/oz) + frankfurter.app (USD→CHF)
-// Fallback: ~95 CHF/g si les APIs fallen
+import { GOLD_FALLBACK_CHF_PER_GRAM } from '../utils/constants';
 
-let cachedPrice: number | null = null;
-let cacheTime = 0;
-const CACHE_MS = 30 * 60 * 1000; // 30 minuts
+export type GoldSource = 'live' | 'cached' | 'fallback';
+export interface GoldQuote { price: number; source: GoldSource; }
 
-export const getGoldPricePerGram = async (): Promise<{ price: number; source: 'live' | 'cached' | 'fallback' }> => {
-  if (cachedPrice && Date.now() - cacheTime < CACHE_MS) {
-    return { price: cachedPrice, source: 'cached' };
-  }
+let cached: { price: number; at: number } | null = null;
+const CACHE_MS = 30 * 60 * 1000;
+const TROY_OUNCE_GRAMS = 31.1035;
 
+const withTimeout = (input: string, ms = 6000) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(input, { signal: controller.signal }).finally(() => clearTimeout(timer));
+};
+
+/** Gold spot in USD per troy ounce, trying two free sources. */
+const fetchGoldUsdPerOz = async (): Promise<number> => {
   try {
-    const [goldRes, fxRes] = await Promise.all([
-      fetch('https://api.metals.live/v1/spot'),
-      fetch('https://api.frankfurter.app/latest?from=USD&to=CHF'),
-    ]);
+    const r = await withTimeout('https://api.gold-api.com/price/XAU');
+    const j = await r.json();
+    if (typeof j?.price === 'number' && j.price > 0) return j.price;
+  } catch { /* try next */ }
+  const r = await withTimeout('https://api.metals.live/v1/spot');
+  const j = await r.json();
+  const v = Array.isArray(j) ? j[0]?.gold : j?.gold;
+  if (typeof v !== 'number' || v <= 0) throw new Error('no gold price');
+  return v;
+};
 
-    const goldData = await goldRes.json();
-    const fxData = await fxRes.json();
+const fetchUsdToChf = async (): Promise<number> => {
+  const r = await withTimeout('https://api.frankfurter.app/latest?from=USD&to=CHF');
+  const j = await r.json();
+  const rate = j?.rates?.CHF;
+  return typeof rate === 'number' && rate > 0 ? rate : 0.88;
+};
 
-    const goldUsdPerOz: number = Array.isArray(goldData) ? goldData[0]?.gold : goldData?.gold;
-    const usdToChf: number = fxData?.rates?.CHF ?? 0.89;
-
-    if (!goldUsdPerOz) throw new Error('No gold price data');
-
-    const pricePerGram = Math.round((goldUsdPerOz * usdToChf / 31.1035) * 100) / 100;
-    cachedPrice = pricePerGram;
-    cacheTime = Date.now();
-    return { price: pricePerGram, source: 'live' };
+/** Gold price in CHF per gram (live → cached → fallback). */
+export const getGoldPricePerGram = async (): Promise<GoldQuote> => {
+  if (cached && Date.now() - cached.at < CACHE_MS) return { price: cached.price, source: 'cached' };
+  try {
+    const [usdPerOz, usdToChf] = await Promise.all([fetchGoldUsdPerOz(), fetchUsdToChf()]);
+    const price = Math.round((usdPerOz * usdToChf / TROY_OUNCE_GRAMS) * 100) / 100;
+    cached = { price, at: Date.now() };
+    return { price, source: 'live' };
   } catch {
-    return { price: cachedPrice ?? 95, source: cachedPrice ? 'cached' : 'fallback' };
+    return cached ? { price: cached.price, source: 'cached' } : { price: GOLD_FALLBACK_CHF_PER_GRAM, source: 'fallback' };
   }
 };

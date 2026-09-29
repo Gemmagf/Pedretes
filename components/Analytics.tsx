@@ -1,248 +1,155 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Bar, Line } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
+import { TrendingUp, Users, Award, Lightbulb, BarChart3, Star, AlertTriangle } from 'lucide-react';
 import { useTranslation } from '../context/LanguageContext';
-import {
-  getRevenueStats, getProfitabilityByType, getClientStats, getMonthlyRevenue,
-  RevenueStats, ProfitabilityByType, ClientStats, MonthlyRevenue
-} from '../services/supabase';
-import { TrendingUp, Users, Award, Lightbulb, BarChart2, Star } from 'lucide-react';
+import { useUsers } from '../context/UsersContext';
+import { useProjects } from '../hooks/useProjects';
+import { computeClientStats, computeMonthlyRevenue, computePersonStats, computeProfitabilityByType, computeRevenueStats } from '../utils/analytics';
+import { daysUntil, fmtMinutes, fmtNumber } from '../utils/format';
+import { TYPE_LABEL } from '../utils/projectTypes';
+import { Avatar, Card, EmptyState, LoadingBlock } from './ui';
 
-const fmt = (n: number) => n.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const AXIS = { grid: { color: '#F6F1E8' }, ticks: { color: '#9C928A', font: { size: 11 } } };
 
-const Analytics = () => {
-  const { t } = useTranslation();
-  const [stats, setStats] = useState<RevenueStats | null>(null);
-  const [profitability, setProfitability] = useState<ProfitabilityByType[]>([]);
-  const [clients, setClients] = useState<ClientStats[]>([]);
-  const [monthly, setMonthly] = useState<MonthlyRevenue[]>([]);
-  const [loading, setLoading] = useState(true);
+const Analytics: React.FC = () => {
+  const { t, locale } = useTranslation();
+  const { users } = useUsers();
+  const { projects, loading } = useProjects();
 
-  useEffect(() => {
-    const load = async () => {
-      const [s, p, c, m] = await Promise.all([
-        getRevenueStats(),
-        getProfitabilityByType(),
-        getClientStats(),
-        getMonthlyRevenue(),
-      ]);
-      setStats(s);
-      setProfitability(p);
-      setClients(c);
-      setMonthly(m);
-      setLoading(false);
-    };
-    load();
-  }, []);
+  const stats = useMemo(() => computeRevenueStats(projects), [projects]);
+  const profitability = useMemo(() => computeProfitabilityByType(projects), [projects]);
+  const clients = useMemo(() => computeClientStats(projects), [projects]);
+  const monthly = useMemo(() => computeMonthlyRevenue(projects, 12), [projects]);
+  const people = useMemo(() => computePersonStats(projects, users), [projects, users]);
+  const overdue = projects.filter(p => p.status !== 'Completed' && (daysUntil(p.deadline) ?? 1) < 0).length;
 
-  if (loading) return (
-    <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-jewelry-gold" />
-    </div>
-  );
+  if (loading) return <LoadingBlock className="py-24" />;
+  if (profitability.length === 0) return <Card><EmptyState icon={<BarChart3 className="h-6 w-6" />} title={t('noAnalyticsData')} /></Card>;
 
-  const totalChfPerHour = profitability.length
-    ? Math.round(profitability.reduce((a, b) => a + b.chfPerHour, 0) / profitability.length)
-    : 0;
-
+  const avgRate = Math.round(profitability.reduce((a, b) => a + b.chfPerHour, 0) / profitability.length);
   const best = profitability[0];
+  const worst = profitability[profitability.length - 1];
   const topClient = clients[0];
 
-  // Recomanacions
-  const recommendations: { icon: React.ReactNode; text: string; color: string }[] = [];
-  if (best) {
-    recommendations.push({
-      icon: <Star className="w-4 h-4" />,
-      text: `${t('mostProfitable')}: ${t('recBestType', { type: best.type, rate: fmt(best.chfPerHour) })}`,
-      color: 'bg-amber-50 border-amber-200 text-amber-800',
-    });
-  }
-  if (topClient) {
-    recommendations.push({
-      icon: <Award className="w-4 h-4" />,
-      text: `${t('bestClient')}: ${t('recBestClient', { client: topClient.client, revenue: fmt(topClient.revenue), count: topClient.projectCount })}`,
-      color: 'bg-green-50 border-green-200 text-green-800',
-    });
-  }
-  if (totalChfPerHour > 0 && totalChfPerHour < 100) {
-    recommendations.push({
-      icon: <TrendingUp className="w-4 h-4" />,
-      text: t('recHourlyRate', { rate: fmt(totalChfPerHour) }),
-      color: 'bg-blue-50 border-blue-200 text-blue-800',
-    });
-  }
-  if (profitability.length >= 2) {
-    const worst = profitability[profitability.length - 1];
-    if (worst.chfPerHour < totalChfPerHour * 0.7) {
-      recommendations.push({
-        icon: <Lightbulb className="w-4 h-4" />,
-        text: t('recWorstType', { type: worst.type, rate: fmt(worst.chfPerHour) }),
-        color: 'bg-red-50 border-red-200 text-red-800',
-      });
-    }
-  }
+  const recommendations: { icon: React.ReactNode; text: string; cls: string }[] = [];
+  if (best) recommendations.push({ icon: <Star className="h-4 w-4" />, text: `${t('mostProfitable')}: ${t('recBestType', { type: TYPE_LABEL[best.type], rate: fmtNumber(best.chfPerHour) })}`, cls: 'border-gold-200 bg-gold-50 text-gold-700' });
+  if (topClient) recommendations.push({ icon: <Award className="h-4 w-4" />, text: `${t('bestClient')}: ${t('recBestClient', { client: topClient.client, revenue: fmtNumber(topClient.revenue), count: topClient.projectCount })}`, cls: 'border-emerald-200 bg-emerald-50 text-emerald-800' });
+  if (avgRate > 0 && avgRate < 100) recommendations.push({ icon: <TrendingUp className="h-4 w-4" />, text: t('recHourlyRate', { rate: fmtNumber(avgRate) }), cls: 'border-sky-200 bg-sky-50 text-sky-800' });
+  if (profitability.length >= 2 && worst.chfPerHour < avgRate * 0.7) recommendations.push({ icon: <Lightbulb className="h-4 w-4" />, text: t('recWorstType', { type: TYPE_LABEL[worst.type], rate: fmtNumber(worst.chfPerHour) }), cls: 'border-red-200 bg-red-50 text-red-800' });
+  if (overdue > 0) recommendations.push({ icon: <AlertTriangle className="h-4 w-4" />, text: t('recOverdue', { count: overdue }), cls: 'border-amber-200 bg-amber-50 text-amber-900' });
 
-  // Gràfica mensual
-  const monthlyChartData = {
-    labels: monthly.slice(-12).map(m => m.month),
-    datasets: [{
-      label: 'CHF',
-      data: monthly.slice(-12).map(m => m.revenue),
-      borderColor: '#b87333',
-      backgroundColor: 'rgba(205, 127, 50, 0.15)',
-      pointBackgroundColor: '#b5a642',
-      pointBorderColor: '#fff',
-      pointRadius: 4,
-      tension: 0.4,
-      fill: true,
-    }],
+  const monthlyData = {
+    labels: monthly.map(m => new Date(`${m.month}-01T12:00:00`).toLocaleDateString(locale, { month: 'short' })),
+    datasets: [{ data: monthly.map(m => m.revenue), backgroundColor: '#C9A24D', hoverBackgroundColor: '#A8663A', borderRadius: 6, maxBarThickness: 36 }],
   };
-
-  // Gràfica rendibilitat per tipus
-  const profitChartData = {
-    labels: profitability.map(p => p.type),
-    datasets: [{
-      label: 'CHF/hora',
-      data: profitability.map(p => p.chfPerHour),
-      backgroundColor: ['#cd7f32', '#b5a642', '#b87333'],
-      borderRadius: 6,
-      barThickness: 40,
-    }],
+  const profitData = {
+    labels: profitability.map(p => TYPE_LABEL[p.type]),
+    datasets: [{ data: profitability.map(p => p.chfPerHour), backgroundColor: ['#A8663A', '#C9A24D', '#B76E79'], borderRadius: 8, maxBarThickness: 48 }],
   };
 
   const kpis = [
-    { label: t('revenueToday'), value: stats?.today ?? 0, color: 'from-gray-600 to-gray-800' },
-    { label: t('revenueMonth'), value: stats?.month ?? 0, color: 'from-jewelry-copper to-jewelry-bronze' },
-    { label: t('revenueYear'), value: stats?.year ?? 0, color: 'from-jewelry-gold to-jewelry-brass' },
-    { label: t('revenueAllTime'), value: stats?.allTime ?? 0, color: 'from-amber-700 to-amber-900' },
+    { label: t('revenueToday'), value: stats.today, cls: 'from-ink-700 to-ink-900' },
+    { label: t('revenueMonth'), value: stats.month, cls: 'from-copper-600 to-copper-500' },
+    { label: t('revenueYear'), value: stats.year, cls: 'from-gold-600 to-gold-400' },
+    { label: t('revenueAllTime'), value: stats.allTime, cls: 'from-copper-700 to-gold-600' },
   ];
 
   return (
     <div className="space-y-6 pb-10">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {kpis.map((kpi, i) => (
-          <motion.div
-            key={kpi.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className={`bg-gradient-to-br ${kpi.color} p-5 rounded-2xl text-white shadow-lg`}
-          >
-            <p className="text-xs uppercase tracking-wider opacity-80 mb-1">{kpi.label}</p>
-            <p className="text-2xl font-serif font-bold">{fmt(kpi.value)}</p>
-            <p className="text-xs opacity-60 mt-1">CHF</p>
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {kpis.map((k, i) => (
+          <motion.div key={k.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+            className={`rounded-2xl bg-gradient-to-br ${k.cls} p-5 text-white shadow-lift`}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/70">{k.label}</p>
+            <p className="mt-2 font-serif text-2xl font-semibold">{fmtNumber(k.value)} <span className="text-sm font-sans font-medium text-white/70">CHF</span></p>
           </motion.div>
         ))}
       </div>
 
-      {/* Recomanacions */}
       {recommendations.length > 0 && (
-        <div className="bg-white rounded-2xl border border-jewelry-gold/20 shadow-sm p-5">
-          <h3 className="font-serif font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 text-jewelry-gold" />
-            {t('recommendations')}
-          </h3>
-          <div className="space-y-3">
+        <Card title={t('recommendations')} icon={<Lightbulb className="h-5 w-5" />}>
+          <ul className="space-y-2">
             {recommendations.map((r, i) => (
-              <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border ${r.color}`}>
-                <span className="mt-0.5 flex-shrink-0">{r.icon}</span>
-                <p className="text-sm">{r.text}</p>
-              </div>
+              <li key={i} className={`flex items-start gap-3 rounded-xl border p-3 text-sm ${r.cls}`}>
+                <span className="mt-0.5 shrink-0">{r.icon}</span><span>{r.text}</span>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </Card>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Tendència mensual */}
-        <div className="bg-white rounded-2xl border border-jewelry-gold/20 shadow-sm p-5">
-          <h3 className="font-serif font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-jewelry-copper" />
-            {t('monthlyTrend')}
-          </h3>
-          <div className="h-52">
-            <Line
-              data={monthlyChartData}
-              options={{
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                  y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { callback: (v) => `${v} CHF` } },
-                  x: { grid: { display: false } },
-                },
-              }}
-            />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <Card title={t('monthlyTrend')} icon={<TrendingUp className="h-5 w-5" />}>
+          <div className="h-56">
+            <Bar data={monthlyData} options={{ maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ...AXIS }, x: { grid: { display: false }, ticks: AXIS.ticks } } }} />
           </div>
-        </div>
+        </Card>
 
-        {/* Rendibilitat per tipus */}
-        <div className="bg-white rounded-2xl border border-jewelry-gold/20 shadow-sm p-5">
-          <h3 className="font-serif font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <BarChart2 className="w-5 h-5 text-jewelry-copper" />
-            {t('profitabilityByType')}
-          </h3>
-          <div className="h-52">
-            <Bar
-              data={profitChartData}
-              options={{
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                  y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { callback: (v) => `${v} CHF/h` } },
-                  x: { grid: { display: false } },
-                },
-              }}
-            />
+        <Card title={t('profitabilityByType')} icon={<BarChart3 className="h-5 w-5" />}>
+          <div className="h-40">
+            <Bar data={profitData} options={{ indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ...AXIS }, y: { grid: { display: false }, ticks: AXIS.ticks } } }} />
           </div>
-          <div className="mt-3 space-y-2">
+          <ul className="mt-3 divide-y divide-cream-200 text-sm">
             {profitability.map(p => (
-              <div key={p.type} className="flex items-center justify-between text-sm">
-                <span className="text-gray-600 font-medium">{p.type}</span>
-                <div className="flex gap-4 text-xs text-gray-500">
-                  <span>{p.projectCount} proj.</span>
-                  <span className="font-bold text-jewelry-copper">{fmt(p.chfPerHour)} CHF/h</span>
-                </div>
-              </div>
+              <li key={p.type} className="flex items-center justify-between py-2">
+                <span className="font-medium text-ink-800">{TYPE_LABEL[p.type]}</span>
+                <span className="flex gap-4 text-xs text-ink-500">
+                  <span>{p.projectCount} {t('projectCount')}</span>
+                  <span>{fmtMinutes(p.totalMinutes)}</span>
+                  <span className="font-bold text-copper-600">{fmtNumber(p.chfPerHour)} {t('chfPerHour')}</span>
+                </span>
+              </li>
             ))}
-            <div className="pt-2 border-t border-gray-100 flex justify-between text-sm font-bold text-gray-700">
-              <span>{t('hourlyRate')}</span>
-              <span className="text-jewelry-gold">{fmt(totalChfPerHour)} CHF/h</span>
-            </div>
-          </div>
-        </div>
+            <li className="flex items-center justify-between pt-3 text-sm font-semibold text-ink-900">
+              <span>{t('hourlyRate')}</span><span className="text-gold-600">{fmtNumber(avgRate)} {t('chfPerHour')}</span>
+            </li>
+          </ul>
+        </Card>
       </div>
 
-      {/* Top Clients */}
-      <div className="bg-white rounded-2xl border border-jewelry-gold/20 shadow-sm p-5">
-        <h3 className="font-serif font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-jewelry-copper" />
-          {t('topClients')}
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-separate border-spacing-y-1">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <Card title={t('topClients')} icon={<Award className="h-5 w-5" />} bodyClassName="p-2">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="text-xs uppercase text-jewelry-brass tracking-wider">
-                <th className="p-2 pl-4">#</th>
-                <th className="p-2">{t('client')}</th>
-                <th className="p-2 text-right">{t('projectCount')}</th>
-                <th className="p-2 text-right">{t('avgPrice')}</th>
-                <th className="p-2 text-right">{t('revenue')}</th>
+              <tr className="text-left text-[11px] uppercase tracking-wider text-ink-400">
+                <th className="px-3 py-2">#</th><th className="px-3 py-2">{t('client')}</th>
+                <th className="px-3 py-2 text-right">{t('projectCount')}</th><th className="px-3 py-2 text-right">{t('avgPrice')}</th><th className="px-3 py-2 text-right">{t('revenue')}</th>
               </tr>
             </thead>
             <tbody>
               {clients.slice(0, 10).map((c, i) => (
-                <tr key={c.client} className="bg-gray-50 hover:bg-amber-50 transition-colors rounded-lg">
-                  <td className="p-2 pl-4 rounded-l-lg text-gray-400 font-medium">{i + 1}</td>
-                  <td className="p-2 font-semibold text-gray-800">{c.client}</td>
-                  <td className="p-2 text-right text-gray-500">{c.projectCount}</td>
-                  <td className="p-2 text-right text-gray-500">{fmt(c.avgPrice)} CHF</td>
-                  <td className="p-2 pr-4 text-right font-bold text-jewelry-copper rounded-r-lg">{fmt(c.revenue)} CHF</td>
+                <tr key={c.client} className="border-t border-cream-200 hover:bg-cream-50">
+                  <td className="px-3 py-2 text-ink-400">{i + 1}</td>
+                  <td className="px-3 py-2 font-medium text-ink-900">{c.client}</td>
+                  <td className="px-3 py-2 text-right text-ink-500">{c.projectCount}</td>
+                  <td className="px-3 py-2 text-right text-ink-500">{fmtNumber(c.avgPrice)}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-copper-600">{fmtNumber(c.revenue)} CHF</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
+
+        <Card title={t('byPerson')} icon={<Users className="h-5 w-5" />} bodyClassName="p-2">
+          {people.length === 0 ? <EmptyState title={t('noAnalyticsData')} className="py-6" /> : (
+            <ul className="divide-y divide-cream-200">
+              {people.map(s => (
+                <li key={s.user.id} className="flex items-center gap-3 px-3 py-3">
+                  <Avatar name={s.user.name} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-ink-900">{s.user.name}</p>
+                    <p className="text-xs text-ink-400">{s.completed} {t('completedCount').toLowerCase()} · {s.open} {t('openCount').toLowerCase()} · {fmtMinutes(s.minutes)} {t('trackedHours').toLowerCase()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-copper-600">{fmtNumber(s.revenue)} CHF</p>
+                    <p className="text-xs text-ink-400">{fmtNumber(s.chfPerHour)} {t('chfPerHour')}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       </div>
     </div>
   );

@@ -1,101 +1,47 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
+import { Sparkles } from 'lucide-react';
+import type { Project, ProjectType } from '../types';
 import { useTranslation } from '../context/LanguageContext';
-import { getSimilarProjects } from '../services/supabase';
-import { getGoldPricePerGram } from '../services/goldAPI';
-import { PredictionData } from '../types';
-import { Sparkles, TrendingUp } from 'lucide-react';
+import { computePrediction } from '../utils/analytics';
+import { fmtMinutes, fmtNumber } from '../utils/format';
 
 interface Props {
-  projectType: 'Alliance' | 'Fassung' | 'Pave';
-  style?: string;
-  material?: string;
-  stoneType?: string;
-  shape?: string;
-  goldWeight?: number; // grams
+  projects: Project[];
+  type: ProjectType;
+  filters: { style?: string; material?: string; stoneType?: string; shape?: string };
 }
 
-const fmtTime = (min: number) => {
-  const h = Math.floor(min / 60);
-  const m = Math.round(min % 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-};
-
-const SmartPrediction: React.FC<Props> = ({ projectType, style, material, stoneType, shape, goldWeight }) => {
+/** Time/price expectations from similar past orders (any backend). */
+const SmartPrediction: React.FC<Props> = ({ projects, type, filters }) => {
   const { t } = useTranslation();
-  const [prediction, setPrediction] = useState<PredictionData | null>(null);
-  const [goldPrice, setGoldPrice] = useState<{ price: number; source: string } | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    getGoldPricePerGram().then(setGoldPrice);
-  }, []);
-
-  useEffect(() => {
-    if (!style && !material && !stoneType) { setPrediction(null); return; }
-    setLoading(true);
-    getSimilarProjects(projectType, { style, material, stoneType, shape })
-      .then(p => { setPrediction(p); setLoading(false); });
-  }, [projectType, style, material, stoneType, shape]);
-
-  const goldCost = goldWeight && goldPrice ? Math.round(goldWeight * goldPrice.price) : null;
-
-  if (!prediction && !goldPrice) return null;
+  const prediction = useMemo(() => computePrediction(projects, type, filters), [projects, type, filters]);
 
   return (
-    <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-2xl p-4 space-y-3">
-      <div className="flex items-center gap-2 text-jewelry-copper">
-        <Sparkles className="w-4 h-4" />
-        <h4 className="font-bold text-sm uppercase tracking-wide">{t('smartPrediction')}</h4>
+    <div className="rounded-2xl border border-gold-200 bg-gradient-to-br from-gold-50 to-white p-4">
+      <div className="mb-2 flex items-center gap-2 text-copper-600">
+        <Sparkles className="h-4 w-4" />
+        <h4 className="text-xs font-bold uppercase tracking-wide">{t('smartPrediction')}</h4>
       </div>
-
-      {loading && <p className="text-xs text-gray-400 animate-pulse">{t('loading')}</p>}
-
-      {prediction && !loading && (
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500">{t('basedOnSimilar', { count: prediction.count })}</p>
+      {!prediction ? (
+        <p className="text-xs text-ink-400">{t('noSimilar')}</p>
+      ) : (
+        <>
+          <p className="mb-2 text-xs text-ink-500">{t('basedOnSimilar', { count: prediction.count })}</p>
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-white rounded-xl p-3 border border-amber-100">
-              <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">{t('predictedTime')}</p>
-              <p className="font-bold text-jewelry-copper text-base">{fmtTime(prediction.avgTime)}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                {t('timeRange')}: {fmtTime(prediction.minTime)} – {fmtTime(prediction.maxTime)}
-              </p>
+            <div className="rounded-xl border border-gold-100 bg-white p-3">
+              <p className="kicker">{t('predictedTime')}</p>
+              <p className="mt-1 text-base font-semibold text-copper-600">{fmtMinutes(prediction.avgTime)}</p>
+              <p className="text-[11px] text-ink-400">{t('timeRange')}: {fmtMinutes(prediction.minTime)} – {fmtMinutes(prediction.maxTime)}</p>
             </div>
-            {prediction.avgPrice && (
-              <div className="bg-white rounded-xl p-3 border border-amber-100">
-                <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">{t('predictedPrice')}</p>
-                <p className="font-bold text-jewelry-copper text-base">{prediction.avgPrice} CHF</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  {Math.round(prediction.avgPrice / (prediction.avgTime / 60))} CHF/h
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Gold price */}
-      {goldPrice && (
-        <div className="flex items-center justify-between bg-white rounded-xl p-3 border border-amber-100">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-yellow-500" />
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase font-bold">{t('goldPriceLabel')}</p>
-              <p className="font-bold text-gray-800 text-sm">{goldPrice.price} CHF/g</p>
+            <div className="rounded-xl border border-gold-100 bg-white p-3">
+              <p className="kicker">{t('predictedPrice')}</p>
+              <p className="mt-1 text-base font-semibold text-copper-600">{prediction.avgPrice ? `${fmtNumber(prediction.avgPrice)} CHF` : '—'}</p>
+              {prediction.avgPrice && prediction.avgTime > 0 && (
+                <p className="text-[11px] text-ink-400">{fmtNumber(prediction.avgPrice / (prediction.avgTime / 60))} CHF/h</p>
+              )}
             </div>
           </div>
-          {goldCost && (
-            <div className="text-right">
-              <p className="text-[10px] text-gray-400 uppercase font-bold">Cost or</p>
-              <p className="font-bold text-yellow-600 text-sm">{goldCost} CHF</p>
-            </div>
-          )}
-          {goldPrice.source !== 'live' && (
-            <span className="text-[9px] text-gray-300 absolute right-6 bottom-4">
-              {goldPrice.source === 'fallback' ? 'valor referència' : 'memòria cau'}
-            </span>
-          )}
-        </div>
+        </>
       )}
     </div>
   );

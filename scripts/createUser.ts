@@ -1,21 +1,21 @@
+// Creates a Supabase Auth user. Usage:
+//   VITE_SUPABASE_URL=... VITE_SUPABASE_ANON_KEY=... npx tsx scripts/createUser.ts <email> <password> [name]
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  'https://sinomclhlaqwahtidetp.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpbm9tY2xobGFxd2FodGlkZXRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MzUyMjYsImV4cCI6MjA5MTQxMTIyNn0.uO8o-YCs_CYh9ezR4GxamScEdHQSgjwMmhppBWLKQB4'
-);
+const url = process.env.VITE_SUPABASE_URL;
+const key = process.env.VITE_SUPABASE_ANON_KEY;
+const [email, password, name = 'Admin'] = process.argv.slice(2);
 
-const { data, error } = await supabase.auth.signUp({
-  email: 'admin@pedretes.ch',
-  password: 'Pedretes2026!',
-  options: { data: { name: 'Admin' } }
-});
+if (!url || !key || !email || !password) {
+  console.error('Usage: VITE_SUPABASE_URL=... VITE_SUPABASE_ANON_KEY=... npx tsx scripts/createUser.ts <email> <password> [name]');
+  process.exit(1);
+}
+
+const supabase = createClient(url, key);
+const { error } = await supabase.auth.signUp({ email, password, options: { data: { name } } });
 
 if (error) {
   console.error('Error:', error.message);
-} else {
-  console.log('Usuari creat!');
-  console.log('Email:    admin@pedretes.ch');
-  console.log('Password: Pedretes2026!');
-  console.log('Confirma el email si cal, o desactiva la confirmació a Supabase.');
+  process.exit(1);
 }
+console.log(`User created: ${email}. Confirm the email if confirmation is enabled in Supabase.`);
