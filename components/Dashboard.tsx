@@ -174,19 +174,22 @@ const CalendarView: React.FC<{ projects: Project[]; date: Date; onNavigate: (d: 
           const items = day ? spans.filter(s => iso >= s.start && iso <= s.end) : [];
           const isToday = iso === todayISO;
           return (
-            <div key={idx} className={`min-h-[72px] border-b border-r border-cream-200 p-1 ${day ? 'bg-white' : 'bg-cream-50/60'} ${idx % 7 === 6 ? 'border-r-0' : ''}`}>
+            <div key={idx} className={`min-h-[76px] border-b border-r border-cream-200 py-1 ${day ? (idx % 7 >= 5 ? 'bg-cream-50/70' : 'bg-white') : 'bg-cream-100/40'} ${idx % 7 === 6 ? 'border-r-0' : ''} ${isToday ? 'bg-gold-50/40' : ''}`}>
               {day && (
                 <>
-                  <span className={`mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? 'bg-copper-600 text-white' : 'text-ink-500'}`}>{day}</span>
-                  <div className="space-y-0.5">
-                    {items.slice(0, 3).map(s => (
-                      <button key={s.p.id} onClick={() => onSelect(s.p)} title={`${s.p.projectName} · ${s.p.client}`}
-                        className={`block w-full truncate rounded px-1.5 py-0.5 text-left text-[10px] font-medium text-white transition hover:brightness-110 ${iso === s.start ? '' : 'opacity-60'}`}
-                        style={{ backgroundColor: s.color }}>
-                        {iso === s.start ? s.p.projectName : iso === s.end ? '◆' : ' '}
-                      </button>
-                    ))}
-                    {items.length > 3 && <p className="pl-1 text-[10px] text-ink-400">+{items.length - 3} {t('more')}</p>}
+                  <span className={`mx-1 mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? 'bg-ink-900 text-gold-300' : 'text-ink-500'}`}>{day}</span>
+                  <div className="space-y-[3px]">
+                    {items.slice(0, 3).map(s => {
+                      const isStart = iso === s.start, isEnd = iso === s.end;
+                      return (
+                        <button key={s.p.id} onClick={() => onSelect(s.p)} title={`${s.p.projectName} · ${s.p.client}`}
+                          className={`block h-[18px] truncate px-1.5 text-left text-[10px] font-semibold leading-[18px] text-white transition hover:brightness-110 ${isStart ? 'ml-1 rounded-l-md' : ''} ${isEnd ? 'rounded-r-md' : ''} ${isStart && isEnd ? 'w-[calc(100%-8px)]' : isStart || isEnd ? 'w-[calc(100%-4px)]' : 'w-full'} ${isStart ? '' : 'opacity-70'}`}
+                          style={{ backgroundColor: s.color }}>
+                          {isStart ? s.p.projectName : '\u00a0'}
+                        </button>
+                      );
+                    })}
+                    {items.length > 3 && <p className="pl-2 text-[10px] text-ink-400">+{items.length - 3} {t('more')}</p>}
                   </div>
                 </>
               )}

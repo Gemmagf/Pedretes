@@ -15,11 +15,11 @@ export const Brand: React.FC<{ size?: 'sm' | 'md' | 'lg'; light?: boolean; class
             <stop offset="1" stopColor="#A8663A" />
           </linearGradient>
         </defs>
-        <rect width="64" height="64" rx="14" fill="#1E1A15" />
+        <rect width="64" height="64" rx="14" fill={light ? "#2C2620" : "#1E1A15"} />
         <path d="M20 22h24l8 10-20 22L12 32z" fill={`url(#${gradientId})`} />
         <path d="M20 22l12 10 12-10M12 32h40M32 32l-8-10M32 32l8-10M32 32v22" fill="none" stroke="#1E1A15" strokeOpacity=".35" strokeWidth="2" strokeLinejoin="round" />
       </svg>
-      <span className={`font-serif font-semibold tracking-[0.18em] ${text} ${light ? 'text-white' : 'text-ink-900'}`}>PEDRETES</span>
+      <span className={`font-serif font-semibold tracking-[0.18em] ${text} ${light ? 'text-cream-100' : 'text-ink-900'}`}>PEDRETES</span>
     </span>
   );
 };

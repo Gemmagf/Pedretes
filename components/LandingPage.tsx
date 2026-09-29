@@ -20,7 +20,7 @@ const FEATURES = [
 const Preview: React.FC = () => {
   const { t } = useTranslation();
   return (
-    <div className="card mx-auto mt-14 max-w-4xl overflow-hidden border-cream-300 shadow-lift">
+    <div className="card mx-auto max-w-4xl overflow-hidden border-white/10 text-ink-900 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] ring-1 ring-black/40">
       <div className="flex items-center gap-1.5 border-b border-cream-200 bg-cream-50 px-4 py-2.5">
         {['#E8C3A5', '#E8D49B', '#DDD2BE'].map(c => <span key={c} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c }} />)}
       </div>
@@ -67,39 +67,45 @@ const LandingPage: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
 
   return (
     <div className="min-h-screen bg-cream-50">
-      <nav className="fixed inset-x-0 top-0 z-40 border-b border-cream-200 bg-cream-50/85 backdrop-blur">
+      <nav className="fixed inset-x-0 top-0 z-40 border-b border-white/[0.06] bg-ink-900/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-          <Brand />
+          <Brand light />
           <div className="flex items-center gap-2">
-            <span className="hidden sm:block"><LanguageSelector compact /></span>
-            <Button variant="secondary" size="sm" onClick={onLogin} icon={<LogIn className="h-4 w-4" />}>{t('ctaLogin')}</Button>
+            <span className="hidden sm:block"><LanguageSelector compact dark /></span>
+            <button onClick={onLogin} className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3.5 py-2 text-xs font-semibold text-cream-100 transition hover:bg-white/10">
+              <LogIn className="h-4 w-4 text-gold-300" />{t('ctaLogin')}
+            </button>
           </div>
         </div>
       </nav>
 
-      <section className="relative overflow-hidden px-5 pt-32 pb-16 sm:pt-36">
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] bg-[radial-gradient(ellipse_at_top,rgba(201,162,77,0.18),transparent_60%)]" />
-        <div className="mx-auto max-w-3xl text-center">
+      <section className="relative bg-ink-900 px-5 pt-32 text-cream-100 sm:pt-36">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute left-1/2 top-[-200px] h-[560px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(201,162,77,0.28),transparent)]" />
+          <div className="absolute inset-0 opacity-[0.35] [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
+        </div>
+        <div className="relative mx-auto max-w-3xl text-center">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <span className="inline-flex items-center gap-2 rounded-full border border-gold-200 bg-white px-3 py-1.5 text-xs font-semibold text-copper-700">
+            <span className="inline-flex items-center gap-2 rounded-full border border-gold-400/30 bg-gold-400/10 px-3 py-1.5 text-xs font-semibold text-gold-200">
               <Sparkles className="h-3.5 w-3.5" />{t('landingBadge')}
             </span>
-            <h1 className="mt-6 font-serif text-4xl font-semibold leading-[1.1] text-ink-900 sm:text-6xl">
-              {t('landingTitle1')}<br /><span className="bg-gradient-to-r from-copper-600 to-gold-500 bg-clip-text text-transparent">{t('landingTitle2')}</span>
+            <h1 className="mt-7 font-serif text-[42px] font-semibold leading-[1.05] tracking-tight text-cream-50 sm:text-[68px]">
+              {t('landingTitle1')}<br /><span className="bg-gradient-to-r from-gold-200 via-gold-400 to-copper-300 bg-clip-text text-transparent">{t('landingTitle2')}</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-ink-500 sm:text-lg">{t('landingLead')}</p>
+            <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-cream-300/75 sm:text-lg">{t('landingLead')}</p>
             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
               <Button variant="gold" size="lg" onClick={() => setShowQuestionnaire(true)} icon={<Sparkles className="h-5 w-5" />}>{t('ctaDemo')} <ArrowRight className="h-4 w-4" /></Button>
-              <Button variant="secondary" size="lg" onClick={onLogin}>{t('ctaLogin')}</Button>
+              <button onClick={onLogin} className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-base font-semibold text-cream-100 transition hover:bg-white/10">{t('ctaLogin')}</button>
             </div>
           </motion.div>
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.15 }}>
-            <Preview />
-          </motion.div>
         </div>
+        <motion.div initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.15 }} className="relative mx-auto max-w-4xl translate-y-10 px-0 sm:translate-y-14">
+          <Preview />
+        </motion.div>
       </section>
+      <div className="h-16 bg-cream-50 sm:h-24" />
 
-      <section className="border-y border-cream-200 bg-white px-5 py-20">
+      <section className="border-y border-cream-200 bg-white px-5 py-20 pt-24">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 text-center">
             <h2 className="font-serif text-3xl font-semibold text-ink-900">{t('featuresTitle')}</h2>
@@ -108,7 +114,7 @@ const LandingPage: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f, i) => (
               <motion.div key={f.n} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.06 }}
-                className="rounded-2xl border border-cream-200 bg-cream-50 p-6 transition hover:border-gold-300 hover:shadow-soft">
+                className="card-hover rounded-2xl border border-cream-200 bg-cream-50 p-6 hover:border-gold-300">
                 <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${f.cls}`}>{f.icon}</div>
                 <h3 className="font-semibold text-ink-900">{t(`feat${f.n}Title`)}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-ink-500">{t(`feat${f.n}Desc`)}</p>
@@ -126,17 +132,18 @@ const LandingPage: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
         </div>
       </section>
 
-      <section className="border-t border-cream-200 bg-gradient-to-br from-gold-50 to-copper-50 px-5 py-20">
-        <div className="mx-auto max-w-xl text-center">
-          <h2 className="font-serif text-3xl font-semibold text-ink-900">{t('ctaBottomTitle')}</h2>
-          <p className="mt-3 text-ink-500">{t('ctaBottomText')}</p>
+      <section className="relative overflow-hidden bg-ink-900 px-5 py-20 text-cream-100">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[400px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(201,162,77,0.22),transparent)]" />
+        <div className="relative mx-auto max-w-xl text-center">
+          <h2 className="font-serif text-3xl font-semibold text-cream-50 sm:text-4xl">{t('ctaBottomTitle')}</h2>
+          <p className="mt-3 text-cream-300/70">{t('ctaBottomText')}</p>
           <Button variant="gold" size="lg" className="mt-8" onClick={() => setShowQuestionnaire(true)} icon={<Sparkles className="h-5 w-5" />}>{t('ctaBottomButton')}</Button>
         </div>
       </section>
 
-      <footer className="flex flex-col items-center gap-3 border-t border-cream-200 px-5 py-8 text-center text-xs text-ink-400 sm:flex-row sm:justify-between">
+      <footer className="flex flex-col items-center gap-3 bg-ink-900 px-5 py-6 text-center text-xs text-cream-300/50 sm:flex-row sm:justify-between">
         <span>{t('footerText')}</span>
-        <LanguageSelector compact />
+        <LanguageSelector compact dark />
       </footer>
 
       <AnimatePresence>{showQuestionnaire && <DemoQuestionnaire onClose={() => setShowQuestionnaire(false)} />}</AnimatePresence>

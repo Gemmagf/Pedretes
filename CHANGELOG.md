@@ -48,7 +48,7 @@ Registre de l'evolució del projecte per sessions de treball.
 - Nou sistema de disseny (`index.css`): paleta crema/tinta amb or antic i coure, ombres suaves, tokens Tailwind v4, estats de focus visibles, `prefers-reduced-motion`.
 - Primitives a `components/ui` (Button, Card, Field, Modal, StatusBadge, Kpi, Segmented, Avatar, EmptyState).
 - Barra lateral agrupada (Übersicht/Analyse · Neuer Auftrag · Team) amb comptador de temporitzadors actius, capçalera per pàgina i disseny mòbil amb calaix.
-- Landing amb selector d'idioma, vista prèvia de l'app i login unificat (usuari o correu).
+- Landing amb hero fosc i vista prèvia de l'app, login a dues columnes (panell de marca + formulari), barra lateral fosca amb accents d'or, KPI principal en fosc, calendari amb barres contínues per projecte, transicions entre pàgines i targetes amb accent de color per tipus.
 
 ### Pendent
 - [ ] Activar Pages al repositori (Settings → Pages → Source: GitHub Actions) i fer merge a `main`.

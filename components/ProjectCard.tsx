@@ -7,6 +7,8 @@ import { fmtDate, fmtMinutes, fmtNumber } from '../utils/format';
 import { TYPE_LABEL } from '../utils/projectTypes';
 import { StatusBadge } from './ui';
 
+const TYPE_ACCENT: Record<Project['sheetType'], string> = { Alliance: 'bg-copper-500', Fassung: 'bg-gold-400', Pave: 'bg-rosegold-500' };
+
 const ProjectCard: React.FC<{ project: Project; assignedName?: string; workshopName?: string; onClick?: () => void }> = ({ project, assignedName, workshopName, onClick }) => {
   const { t, locale } = useTranslation();
   const meta = [
@@ -17,8 +19,9 @@ const ProjectCard: React.FC<{ project: Project; assignedName?: string; workshopN
   ].filter(Boolean) as { icon: React.ReactNode; text: string }[];
 
   return (
-    <article className="card group flex flex-col p-4 transition-shadow hover:shadow-lift">
-      <div className="flex items-start justify-between gap-2">
+    <article className="card card-hover group relative flex flex-col overflow-hidden p-4">
+      <span className={`absolute inset-y-0 left-0 w-1 ${TYPE_ACCENT[project.sheetType]}`} />
+      <div className="flex items-start justify-between gap-2 pl-1.5">
         <div className="min-w-0">
           <p className="kicker">{TYPE_LABEL[project.sheetType]}</p>
           <h3 className="mt-0.5 truncate font-serif text-base font-semibold text-ink-900">{project.projectName}</h3>

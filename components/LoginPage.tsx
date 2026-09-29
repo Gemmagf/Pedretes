@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, HardDrive, Cloud } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, LogIn, UserPlus, HardDrive, Cloud, Timer, FileText, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../context/LanguageContext';
 import { Brand } from './Brand';
@@ -53,19 +53,44 @@ const LoginPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     } finally { setLoading(false); }
   };
 
-  return (
-    <div className="flex min-h-screen flex-col bg-cream-50">
-      <div className="flex items-center justify-between px-6 py-4">
-        <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-ink-900"><ArrowLeft className="h-4 w-4" />{t('backToLanding')}</button>
-        <LanguageSelector />
-      </div>
+  const highlights = [
+    { icon: <Timer className="h-4 w-4" />, key: 'feat1Title' as const },
+    { icon: <FileText className="h-4 w-4" />, key: 'feat4Title' as const },
+    { icon: <Users className="h-4 w-4" />, key: 'feat5Title' as const },
+  ];
 
-      <div className="flex flex-1 items-center justify-center p-4 pb-16">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
-          <div className="mb-8 text-center">
-            <Brand size="lg" className="justify-center" />
-            <p className="mt-2 text-sm text-ink-500">{t('authTagline')}</p>
-          </div>
+  return (
+    <div className="flex min-h-screen bg-cream-50">
+      {/* Brand panel */}
+      <aside className="relative hidden w-[44%] flex-col justify-between overflow-hidden bg-ink-900 p-10 text-cream-100 lg:flex">
+        <div className="pointer-events-none absolute -left-24 top-1/3 h-[520px] w-[520px] rounded-full bg-[radial-gradient(closest-side,rgba(201,162,77,0.25),transparent)]" />
+        <div className="relative"><Brand light /></div>
+        <div className="relative">
+          <h2 className="font-serif text-4xl font-semibold leading-tight text-cream-50">{t('landingTitle1')}<br /><span className="text-gold-300">{t('landingTitle2')}</span></h2>
+          <ul className="mt-8 space-y-3">
+            {highlights.map(h => (
+              <li key={h.key} className="flex items-center gap-3 text-sm text-cream-300/80">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.06] text-gold-300">{h.icon}</span>{t(h.key)}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="relative text-xs text-cream-300/40">{t('footerText')}</p>
+      </aside>
+
+      <div className="flex flex-1 flex-col">
+        <div className="flex items-center justify-between px-6 py-4">
+          <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-ink-900"><ArrowLeft className="h-4 w-4" />{t('backToLanding')}</button>
+          <LanguageSelector />
+        </div>
+
+        <div className="flex flex-1 items-center justify-center p-4 pb-16">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
+            <div className="mb-8 text-center lg:text-left">
+              <Brand size="lg" className="justify-center lg:hidden" />
+              <h1 className="mt-4 font-serif text-3xl font-semibold text-ink-900 lg:mt-0">{t('login')}</h1>
+              <p className="mt-1.5 text-sm text-ink-500">{t('authTagline')}</p>
+            </div>
 
           <div className="card overflow-hidden">
             {cloudAvailable && (
@@ -115,7 +140,8 @@ const LoginPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               {cloudAvailable && <p className="inline-flex items-center gap-1.5"><Cloud className="h-3.5 w-3.5" />{t('cloudLoginHint')}</p>}
             </div>
           </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );

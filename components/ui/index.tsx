@@ -50,12 +50,12 @@ export const Card: React.FC<{
 }> = ({ title, icon, action, kicker, className = '', bodyClassName = '', children }) => (
   <section className={`card overflow-hidden ${className}`}>
     {(title || action) && (
-      <header className="flex items-center justify-between gap-3 border-b border-cream-200 px-5 py-4">
+      <header className="flex items-center justify-between gap-3 border-b border-cream-200 px-5 py-3.5">
         <div className="flex min-w-0 items-center gap-2.5">
-          {icon && <span className="text-copper-500">{icon}</span>}
+          {icon && <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold-50 text-copper-500 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
           <div className="min-w-0">
             {kicker && <p className="kicker">{kicker}</p>}
-            {title && <h3 className="truncate text-base font-semibold text-ink-900">{title}</h3>}
+            {title && <h3 className="truncate font-sans text-[15px] font-semibold text-ink-900">{title}</h3>}
           </div>
         </div>
         {action}
@@ -121,14 +121,14 @@ export const EmptyState: React.FC<{ icon?: React.ReactNode; title: string; text?
 export const Kpi: React.FC<{ label: string; value: React.ReactNode; hint?: string; icon?: React.ReactNode; tone?: 'default' | 'brand' }> =
   ({ label, value, hint, icon, tone = 'default' }) => (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className={`relative overflow-hidden rounded-2xl border p-4 ${tone === 'brand' ? 'border-copper-600 bg-gradient-to-br from-copper-600 via-copper-500 to-gold-500 text-white shadow-lift' : 'card'}`}>
+      className={`relative overflow-hidden rounded-2xl p-5 ${tone === 'brand' ? 'bg-ink-900 text-cream-100 shadow-lift' : 'card'}`}>
       <div className="flex items-start justify-between gap-2">
-        <p className={`kicker ${tone === 'brand' ? 'text-white/70' : ''}`}>{label}</p>
-        {icon && <span className={tone === 'brand' ? 'text-white/70' : 'text-copper-500'}>{icon}</span>}
+        <p className={`kicker ${tone === 'brand' ? 'text-cream-300/60' : ''}`}>{label}</p>
+        {icon && <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${tone === 'brand' ? 'bg-white/10 text-gold-300' : 'bg-gold-50 text-copper-500'}`}>{icon}</span>}
       </div>
-      <p className={`mt-2 font-serif text-2xl font-semibold leading-none sm:text-[28px] ${tone === 'brand' ? '' : 'text-ink-900'}`}>{value}</p>
-      {hint && <p className={`mt-2 text-xs ${tone === 'brand' ? 'text-white/70' : 'text-ink-400'}`}>{hint}</p>}
-      {tone === 'brand' && <div className="pointer-events-none absolute -right-8 -bottom-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />}
+      <p className={`tnum mt-3 font-serif text-[30px] font-semibold leading-none sm:text-[34px] ${tone === 'brand' ? 'text-gold-300' : 'text-ink-900'}`}>{value}</p>
+      {hint && <p className={`mt-2.5 text-xs ${tone === 'brand' ? 'text-cream-300/60' : 'text-ink-400'}`}>{hint}</p>}
+      {tone === 'brand' && <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gold-400/20 blur-3xl" />}
     </motion.div>
   );
 
