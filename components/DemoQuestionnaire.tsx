@@ -1,42 +1,32 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { X, Gem, Watch, Layers, Package, Scissors, Wrench, UtensilsCrossed, Paintbrush, Car, Hammer, Building2, ArrowRight } from 'lucide-react';
 import { useDemo } from '../context/DemoContext';
-import { CraftType, TeamSize, MainChallenge, DemoAnswers } from '../utils/demoData';
-import { X, Gem, Watch, Layers, Package, Scissors, Wrench, UtensilsCrossed, Paintbrush, Car, Hammer, Building2 } from 'lucide-react';
+import { useTranslation } from '../context/LanguageContext';
+import type { CraftType, TeamSize, MainChallenge, DemoAnswers } from '../utils/demoData';
+import { Button } from './ui';
 
-interface Props {
-  onClose: () => void;
-}
-
-const crafts: { value: CraftType; label: string; sub: string; icon: React.ReactNode }[] = [
-  { value: 'jewelry',     label: 'Schmuck',      sub: 'Ring, Collier, Armband…',       icon: <Gem className="w-5 h-5" /> },
-  { value: 'watchmaking', label: 'Uhren',         sub: 'Revision, Restauration…',        icon: <Watch className="w-5 h-5" /> },
-  { value: 'ceramics',    label: 'Keramik',       sub: 'Serie, Unikat, Installation…',   icon: <Layers className="w-5 h-5" /> },
-  { value: 'leather',     label: 'Leder',         sub: 'Taschen, Gürtel, Accessoires…',  icon: <Package className="w-5 h-5" /> },
-  { value: 'textiles',    label: 'Textil',        sub: 'Couture, Maßschneiderei…',       icon: <Scissors className="w-5 h-5" /> },
-  { value: 'bakery',      label: 'Bäckerei',      sub: 'Torten, Catering, Patisserie…',  icon: <UtensilsCrossed className="w-5 h-5" /> },
-  { value: 'painter',     label: 'Malerei',       sub: 'Auftragskunst, Illustration…',   icon: <Paintbrush className="w-5 h-5" /> },
-  { value: 'mechanic',    label: 'Mechanik',      sub: 'Reparatur, Service, Umbau…',     icon: <Car className="w-5 h-5" /> },
-  { value: 'workshop',    label: 'Schreinerei',   sub: 'Möbel, Einbau, Restauration…',   icon: <Hammer className="w-5 h-5" /> },
-  { value: 'architect',   label: 'Architektur',   sub: 'Planung, Umbau, Beratung…',      icon: <Building2 className="w-5 h-5" /> },
-  { value: 'other',       label: 'Anderes',       sub: 'Eigenes Handwerk',               icon: <Wrench className="w-5 h-5" /> },
+const CRAFTS: { value: CraftType; icon: React.ReactNode }[] = [
+  { value: 'jewelry', icon: <Gem className="h-5 w-5" /> },
+  { value: 'watchmaking', icon: <Watch className="h-5 w-5" /> },
+  { value: 'ceramics', icon: <Layers className="h-5 w-5" /> },
+  { value: 'leather', icon: <Package className="h-5 w-5" /> },
+  { value: 'textiles', icon: <Scissors className="h-5 w-5" /> },
+  { value: 'bakery', icon: <UtensilsCrossed className="h-5 w-5" /> },
+  { value: 'painter', icon: <Paintbrush className="h-5 w-5" /> },
+  { value: 'mechanic', icon: <Car className="h-5 w-5" /> },
+  { value: 'workshop', icon: <Hammer className="h-5 w-5" /> },
+  { value: 'architect', icon: <Building2 className="h-5 w-5" /> },
+  { value: 'other', icon: <Wrench className="h-5 w-5" /> },
 ];
+const TEAM_SIZES: TeamSize[] = ['solo', 'small', 'medium', 'large'];
+const CHALLENGES: MainChallenge[] = ['time', 'clients', 'costs', 'all'];
 
-const teamSizes: { value: TeamSize; label: string; sub: string }[] = [
-  { value: 'solo', label: 'Allein', sub: 'Ich bin der einzige' },
-  { value: 'small', label: '2–3 Personen', sub: 'Kleines Team' },
-  { value: 'medium', label: '4–10 Personen', sub: 'Mittleres Atelier' },
-  { value: 'large', label: 'Mehr als 10', sub: 'Grosser Betrieb' },
-];
+const optionCls = (active: boolean) =>
+  `flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all hover:border-gold-400 hover:bg-gold-50/60 ${active ? 'border-copper-500 bg-gold-50' : 'border-cream-200'}`;
 
-const challenges: { value: MainChallenge; label: string; sub: string }[] = [
-  { value: 'time', label: 'Zeiterfassung', sub: 'Ich weiss nie genau wie viel Zeit ein Auftrag braucht' },
-  { value: 'clients', label: 'Kundenverwaltung', sub: 'Den Überblick über alle Aufträge behalten' },
-  { value: 'costs', label: 'Kostenkontrolle', sub: 'Preise richtig kalkulieren und Margen kennen' },
-  { value: 'all', label: 'Alles davon', sub: 'Ich brauche einen vollständigen Überblick' },
-];
-
-const DemoQuestionnaire: React.FC<Props> = ({ onClose }) => {
+const DemoQuestionnaire: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const { t } = useTranslation();
   const { enterDemo } = useDemo();
   const [step, setStep] = useState(0);
   const [craft, setCraft] = useState<CraftType | null>(null);
@@ -44,98 +34,55 @@ const DemoQuestionnaire: React.FC<Props> = ({ onClose }) => {
   const [challenge, setChallenge] = useState<MainChallenge | null>(null);
   const [workshopName, setWorkshopName] = useState('');
 
-  const handleStart = () => {
+  const start = () => {
     if (!craft || !teamSize || !challenge) return;
-    const answers: DemoAnswers = {
-      craft,
-      teamSize,
-      challenge,
-      workshopName: workshopName.trim() || 'Mein Atelier',
-    };
+    const answers: DemoAnswers = { craft, teamSize, challenge, workshopName: workshopName.trim() || 'Mein Atelier' };
     enterDemo(answers);
     onClose();
   };
 
   const steps = [
     {
-      title: 'Was für ein Atelier hast du?',
-      sub: 'Wir passen die Demo an dein Handwerk an.',
+      title: t('q1Title'), sub: t('q1Sub'),
       content: (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {crafts.map(c => (
-            <button
-              key={c.value}
-              onClick={() => { setCraft(c.value); setStep(1); }}
-              className={`flex items-center gap-2.5 p-3 rounded-xl border-2 transition-all text-left hover:border-jewelry-gold hover:bg-amber-50/50 ${
-                craft === c.value ? 'border-jewelry-copper bg-amber-50' : 'border-gray-200'
-              }`}
-            >
-              <span className="text-jewelry-copper flex-shrink-0">{c.icon}</span>
-              <div>
-                <p className="font-semibold text-sm text-gray-800 leading-tight">{c.label}</p>
-                <p className="text-[10px] text-gray-400 leading-tight">{c.sub}</p>
-              </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {CRAFTS.map(c => (
+            <button key={c.value} onClick={() => { setCraft(c.value); setStep(1); }} className={optionCls(craft === c.value)}>
+              <span className="shrink-0 text-copper-600">{c.icon}</span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold leading-tight text-ink-900">{t(`craft_${c.value}`)}</span>
+                <span className="block truncate text-[10px] leading-tight text-ink-400">{t(`craftSub_${c.value}`)}</span>
+              </span>
             </button>
           ))}
         </div>
       ),
     },
     {
-      title: 'Wie gross ist dein Team?',
-      sub: 'So generieren wir realistische Teamdaten.',
+      title: t('q2Title'), sub: t('q2Sub'),
       content: (
-        <div className="flex flex-col gap-3">
-          {teamSizes.map(t => (
-            <button
-              key={t.value}
-              onClick={() => { setTeamSize(t.value); setStep(2); }}
-              className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left hover:border-jewelry-gold hover:bg-amber-50/50 ${
-                teamSize === t.value ? 'border-jewelry-copper bg-amber-50' : 'border-gray-200'
-              }`}
-            >
-              <div>
-                <p className="font-semibold text-gray-800">{t.label}</p>
-                <p className="text-xs text-gray-400">{t.sub}</p>
-              </div>
+        <div className="flex flex-col gap-2">
+          {TEAM_SIZES.map(s => (
+            <button key={s} onClick={() => { setTeamSize(s); setStep(2); }} className={optionCls(teamSize === s)}>
+              <span><span className="block font-semibold text-ink-900">{t(`team_${s}`)}</span><span className="block text-xs text-ink-400">{t(`teamSub_${s}`)}</span></span>
             </button>
           ))}
         </div>
       ),
     },
     {
-      title: 'Was ist deine grösste Herausforderung?',
-      sub: 'Wir heben die relevantesten Features für dich hervor.',
+      title: t('q3Title'), sub: t('q3Sub'),
       content: (
-        <div className="flex flex-col gap-3">
-          {challenges.map(c => (
-            <button
-              key={c.value}
-              onClick={() => setChallenge(c.value)}
-              className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left hover:border-jewelry-gold hover:bg-amber-50/50 ${
-                challenge === c.value ? 'border-jewelry-copper bg-amber-50' : 'border-gray-200'
-              }`}
-            >
-              <div>
-                <p className="font-semibold text-gray-800">{c.label}</p>
-                <p className="text-xs text-gray-400">{c.sub}</p>
-              </div>
+        <div className="flex flex-col gap-2">
+          {CHALLENGES.map(c => (
+            <button key={c} onClick={() => setChallenge(c)} className={optionCls(challenge === c)}>
+              <span><span className="block font-semibold text-ink-900">{t(`ch_${c}`)}</span><span className="block text-xs text-ink-400">{t(`chSub_${c}`)}</span></span>
             </button>
           ))}
           {challenge && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-2 space-y-3">
-              <input
-                type="text"
-                placeholder="Name deines Ateliers (optional)"
-                value={workshopName}
-                onChange={e => setWorkshopName(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-gray-50 focus:ring-2 focus:ring-jewelry-gold focus:bg-white outline-none"
-              />
-              <button
-                onClick={handleStart}
-                className="w-full py-3 bg-gradient-to-r from-jewelry-gold to-jewelry-copper text-white rounded-xl font-bold shadow-md hover:shadow-lg transition"
-              >
-                Demo starten →
-              </button>
+              <input className="input" placeholder={t('workshopNamePlaceholder')} value={workshopName} onChange={e => setWorkshopName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') start(); }} />
+              <Button variant="gold" size="lg" className="w-full" onClick={start} icon={<ArrowRight className="h-4 w-4" />}>{t('startDemo')}</Button>
             </motion.div>
           )}
         </div>
@@ -144,51 +91,27 @@ const DemoQuestionnaire: React.FC<Props> = ({ onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-100">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-ink-900/40 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <motion.div role="dialog" aria-modal="true" initial={{ opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.98 }}
+        className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white shadow-lift sm:max-w-lg sm:rounded-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-cream-200 p-5">
           <div>
-            <h2 className="font-serif font-bold text-xl text-gray-800">{steps[step].title}</h2>
-            <p className="text-sm text-gray-400 mt-0.5">{steps[step].sub}</p>
+            <h2 className="font-serif text-xl font-semibold text-ink-900">{steps[step].title}</h2>
+            <p className="mt-0.5 text-sm text-ink-400">{steps[step].sub}</p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
-            <X className="w-5 h-5" />
-          </button>
+          <button onClick={onClose} className="rounded-lg p-2 text-ink-400 hover:bg-cream-100 hover:text-ink-800" aria-label={t('close')}><X className="h-5 w-5" /></button>
         </div>
-
-        {/* Progress dots */}
-        <div className="flex gap-2 px-5 pt-4">
-          {steps.map((_, i) => (
-            <div key={i} className={`h-1.5 flex-1 rounded-full transition-all ${i <= step ? 'bg-jewelry-copper' : 'bg-gray-100'}`} />
-          ))}
+        <div className="flex gap-1.5 px-5 pt-4">
+          {steps.map((_, i) => <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= step ? 'bg-copper-500' : 'bg-cream-200'}`} />)}
         </div>
-
-        {/* Content */}
         <AnimatePresence mode="wait">
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}
-            className="p-5"
-          >
+          <motion.div key={step} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.18 }} className="p-5">
             {steps[step].content}
           </motion.div>
         </AnimatePresence>
-
-        {/* Back */}
         {step > 0 && (
           <div className="px-5 pb-4">
-            <button onClick={() => setStep(s => s - 1)} className="text-xs text-gray-400 hover:text-gray-600 transition">
-              ← Zurück
-            </button>
+            <button onClick={() => setStep(s => s - 1)} className="text-xs font-medium text-ink-400 hover:text-ink-800">← {t('back')}</button>
           </div>
         )}
       </motion.div>

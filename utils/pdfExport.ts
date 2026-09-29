@@ -1,9 +1,6 @@
 import jsPDF from 'jspdf';
-import { Project } from '../types';
-
-// Typical Swiss CHF VAT rate
-const MwSt_RATE = 0.081; // 8.1%
-const HOURLY_RATE = 120; // CHF / hour
+import type { Project } from '../types';
+import { HOURLY_RATE, VAT_RATE as MwSt_RATE } from './constants';
 
 const formatCHF = (amount: number) =>
   `CHF ${amount.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -26,7 +23,7 @@ const typeLabel = (type: string) => {
   }
 };
 
-export const exportProjectQuote = (project: Project, atelierName = 'Pedretes Atelier') => {
+export const exportProjectQuote = (project: Project, atelierName: string = 'Pedretes Atelier') => {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = 210;
   const pageH = 297;
@@ -34,7 +31,7 @@ export const exportProjectQuote = (project: Project, atelierName = 'Pedretes Ate
   const contentW = pageW - margin * 2;
 
   // ── Colors ─────────────────────────────────────────────────────────────────
-  const gold = [184, 115, 51] as [number, number, number];      // #b87333 copper
+  const gold = [168, 102, 58] as [number, number, number];      // copper-500
   const darkGray = [40, 40, 40] as [number, number, number];
   const midGray = [100, 100, 100] as [number, number, number];
   const lightGray = [240, 238, 234] as [number, number, number];
@@ -116,7 +113,7 @@ export const exportProjectQuote = (project: Project, atelierName = 'Pedretes Ate
   // Working time
   if (timeHours > 0) {
     rows.push({
-      desc: 'Arbeitszeit · Steinsetzerarbeit',
+      desc: 'Arbeitszeit · Steinfasserarbeit',
       qty: `${timeHours.toFixed(1)} h`,
       unit: `${HOURLY_RATE.toFixed(2)} CHF/h`,
       price: timeHours * HOURLY_RATE,
@@ -235,8 +232,8 @@ export const exportProjectQuote = (project: Project, atelierName = 'Pedretes Ate
   pdf.setTextColor(...midGray);
   pdf.text(atelierName, margin, pageH - 10);
   pdf.text('Zürich, Schweiz', margin, pageH - 5);
-  pdf.text('www.pedretes.ch', pageW / 2, pageH - 10, { align: 'center' });
-  pdf.text('info@pedretes.ch', pageW / 2, pageH - 5, { align: 'center' });
+  pdf.text('Steinfasser-Atelier', pageW / 2, pageH - 10, { align: 'center' });
+  pdf.text('Offerte erstellt mit Pedretes', pageW / 2, pageH - 5, { align: 'center' });
   pdf.text(`Offerte ${project.id?.substring(0, 8).toUpperCase() ?? ''}`, pageW - margin, pageH - 10, { align: 'right' });
   pdf.text(`Seite 1 von 1`, pageW - margin, pageH - 5, { align: 'right' });
 

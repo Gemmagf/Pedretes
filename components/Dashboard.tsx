@@ -1,200 +1,195 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler } from 'chart.js';
+import { Bar, Line } from 'react-chartjs-2';
+import {
+  Briefcase, CheckCircle2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Clock, Play, Square,
+  FileDown, Search, CalendarDays, AlertTriangle, Trash2, Pencil, Hourglass, Coins, TrendingUp, Users as UsersIcon,
+} from 'lucide-react';
+import type { Project, ProjectStatus, User } from '../types';
+import { PROJECT_STATUSES } from '../types';
 import { useTranslation } from '../context/LanguageContext';
 import { useUsers } from '../context/UsersContext';
-import { useDemo } from '../context/DemoContext';
-import { getProjects, updateProject, startTimer, stopTimer } from '../services/supabase';
-import { Project } from '../types';
-import {
-  Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale,
-  LinearScale, BarElement, LineElement, PointElement, Filler
-} from 'chart.js';
-import { Bar, Line } from 'react-chartjs-2';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Briefcase, CheckCircle, AlertCircle, X,
-  ChevronLeft, ChevronRight, User, Calendar as CalendarIcon,
-  TrendingUp, Filter, Clock, Play, Square, ChevronDown, ChevronUp, FileDown
-} from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { useData } from '../context/DataContext';
+import { useProjects } from '../hooks/useProjects';
 import { exportProjectQuote } from '../utils/pdfExport';
+import { HOURLY_RATE } from '../utils/constants';
+import { upcomingDeadlines } from '../utils/analytics';
+import { colorFor, daysUntil, fmtClock, fmtDate, fmtMinutes, fmtNumber, statusKey, toISODate } from '../utils/format';
+import { TYPE_LABEL } from '../utils/projectTypes';
+import { Avatar, Button, Card, EmptyState, Field, Kpi, LoadingBlock, Modal, Segmented, StatusBadge } from './ui';
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Filler);
 
-// Formata minuts → "2h 15m"
-const fmtTime = (minutes: number) => {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-};
+type Period = 'week' | 'month' | 'year' | 'all';
+type StatusFilter = 'all' | ProjectStatus;
 
-// Formata segons → "01:23:45"
-const fmtSeconds = (seconds: number) => {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
-};
+const CHART_OPTIONS = {
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    y: { beginAtZero: true, grid: { color: '#F6F1E8' }, ticks: { color: '#9C928A', font: { size: 11 } } },
+    x: { grid: { display: false }, ticks: { color: '#9C928A', font: { size: 11 } } },
+  },
+} as const;
 
-// --- Edit Modal ---
-const ProjectDetailModal = ({ project, onClose, onUpdate }: { project: Project; onClose: () => void; onUpdate: (p: Project) => void }) => {
-  const { t } = useTranslation();
-  const [edited, setEdited] = useState({ ...project });
-  const hourlyRate = 120;
+// --- Deadline chip -----------------------------------------------------------
 
-  const handleSave = async () => {
-    const saved = await updateProject(edited);
-    if (saved) onUpdate(saved);
-    onClose();
-  };
-
-  const daysToDeadline = edited.deadline
-    ? Math.ceil((new Date(edited.deadline).getTime() - Date.now()) / 86400000)
-    : 0;
-
-  const impliedCost = (edited.actualTime || 0) / 60 * hourlyRate;
-  const showPriceAlert = (edited.agreedPrice && impliedCost > edited.agreedPrice) || ((edited.actualTime || 0) > (edited.totalTime || 0));
-
+const DeadlineChip: React.FC<{ deadline?: string; done?: boolean }> = ({ deadline, done }) => {
+  const { t, locale } = useTranslation();
+  if (!deadline) return <span className="text-xs text-ink-300">{t('noDeadline')}</span>;
+  const d = daysUntil(deadline)!;
+  if (done) return <span className="text-xs text-ink-400">{fmtDate(deadline, locale)}</span>;
+  const cls = d < 0 ? 'bg-red-50 text-red-700 border-red-200' : d === 0 ? 'bg-amber-50 text-amber-800 border-amber-200' : d <= 3 ? 'bg-gold-50 text-gold-700 border-gold-200' : 'bg-cream-100 text-ink-600 border-cream-300';
+  const label = d < 0 ? t('overdueBy', { count: -d }) : d === 0 ? t('dueToday') : d === 1 ? t('tomorrow') : t('inDays', { count: d });
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-jewelry-copper/20 backdrop-blur-sm p-4">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border-t-4 border-jewelry-gold">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-start sticky top-0 bg-white z-10">
-          <div>
-            <h2 className="text-2xl font-serif font-bold text-gray-800">{edited.projectName}</h2>
-            <span className="text-sm font-medium text-jewelry-copper">{edited.client} · {edited.sheetType}</span>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-amber-50 rounded-full transition text-gray-400"><X className="w-6 h-6" /></button>
-        </div>
-
-        <div className="p-6 space-y-6">
-          {/* Status */}
-          <div className="flex gap-2 bg-amber-50 p-1.5 rounded-xl">
-            {(['Pending', 'In Progress', 'Completed'] as const).map(s => (
-              <button key={s} onClick={() => setEdited({ ...edited, status: s })}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${edited.status === s ? 'bg-white shadow-sm text-jewelry-copper ring-1 ring-jewelry-gold/30' : 'text-gray-500 hover:text-jewelry-bronze'}`}>
-                {t(s.toLowerCase().replace(' ', '_'))}
-              </button>
-            ))}
-          </div>
-
-          {/* Time & Deadline */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-jewelry-rosegold/30 shadow-sm">
-              <label className="text-xs font-bold uppercase text-jewelry-rosegold tracking-wider mb-2 block">{t('deadline')}</label>
-              <input type="date" value={edited.deadline || ''} onChange={e => setEdited({ ...edited, deadline: e.target.value })}
-                className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 mb-2 focus:ring-2 focus:ring-jewelry-rosegold outline-none" />
-              <div className={`text-sm flex items-center gap-1 ${daysToDeadline < 3 ? 'text-red-500' : 'text-gray-500'}`}>
-                <CalendarIcon className="w-4 h-4" />
-                {daysToDeadline > 0 ? `${daysToDeadline} ${t('daysLabel')}` : t('overdueToday')}
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-jewelry-copper/30 shadow-sm">
-              <label className="text-xs font-bold uppercase text-jewelry-copper tracking-wider mb-2 block">{t('actualTime')} (min)</label>
-              <div className="flex items-center gap-2">
-                <input type="number" value={edited.actualTime || 0} onChange={e => setEdited({ ...edited, actualTime: Number(e.target.value) })}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 focus:ring-2 focus:ring-jewelry-copper outline-none" />
-                <span className="text-sm text-gray-400 whitespace-nowrap">/ {edited.totalTime} est</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2 mt-3 rounded-full overflow-hidden">
-                <div className="bg-jewelry-copper h-full transition-all" style={{ width: `${Math.min(((edited.actualTime || 0) / (edited.totalTime || 1)) * 100, 100)}%` }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Pricing */}
-          <div className="border border-jewelry-gold/30 p-4 rounded-2xl bg-amber-50/20">
-            <div className="flex justify-between items-center mb-2">
-              <label className="font-medium text-gray-700">{t('agreedPrice')}</label>
-              {showPriceAlert && (
-                <div className="flex items-center gap-1 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-full border border-red-200">
-                  <AlertCircle className="w-3 h-3" />{t('priceAlert')}
-                </div>
-              )}
-            </div>
-            <div className="relative">
-              <span className="absolute left-3 top-3 text-jewelry-copper font-serif font-bold">CHF</span>
-              <input type="number" value={edited.agreedPrice || ''} onChange={e => setEdited({ ...edited, agreedPrice: Number(e.target.value) })}
-                className="w-full border border-gray-300 rounded-lg p-2.5 pl-14 font-serif text-xl font-bold text-gray-800 focus:ring-2 focus:ring-jewelry-gold outline-none" />
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 border-t bg-gray-50 flex justify-end gap-3 rounded-b-2xl">
-          <button onClick={onClose} className="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-lg transition font-medium">{t('close')}</button>
-          <button onClick={handleSave} className="px-6 py-2.5 bg-gradient-to-r from-jewelry-copper to-jewelry-bronze text-white font-medium rounded-lg hover:shadow-lg transition">{t('saveChanges')}</button>
-        </div>
-      </motion.div>
-    </div>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cls}`} title={fmtDate(deadline, locale)}>
+      {d < 0 && <AlertTriangle className="h-3 w-3" />}{label}
+    </span>
   );
 };
 
-// --- Calendar View ---
-const CalendarView = ({ projects, currentDate, onNavigate, onSelectProject, users }: {
-  projects: Project[]; currentDate: Date; onNavigate: (d: Date) => void; onSelectProject: (p: Project) => void; users: any[];
-}) => {
-  const getDaysInMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  const getFirstDay = (d: Date) => { const day = new Date(d.getFullYear(), d.getMonth(), 1).getDay(); return day === 0 ? 6 : day - 1; };
+// --- Edit modal --------------------------------------------------------------
 
-  const daysInMonth = getDaysInMonth(currentDate);
-  const startOffset = getFirstDay(currentDate);
-  const calendarDays = Array.from({ length: 42 }, (_, i) => {
-    const n = i - startOffset + 1;
-    return n > 0 && n <= daysInMonth ? n : null;
-  });
+const ProjectEditModal: React.FC<{
+  project: Project; users: User[]; onClose: () => void;
+  onSave: (p: Project) => Promise<unknown>; onDelete: (p: Project) => Promise<unknown>;
+}> = ({ project, users, onClose, onSave, onDelete }) => {
+  const { t } = useTranslation();
+  const [edited, setEdited] = useState<Project>({ ...project });
+  const [saving, setSaving] = useState(false);
+  const set = <K extends keyof Project>(k: K, v: Project[K]) => setEdited(prev => ({ ...prev, [k]: v }));
 
-  const isSameDay = (d1: Date, d2: Date) => d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
-  const isInRange = (check: Date, start: Date, end: Date) => {
-    const c = new Date(check); c.setHours(0, 0, 0, 0);
-    const s = new Date(start); s.setHours(0, 0, 0, 0);
-    const e = new Date(end); e.setHours(0, 0, 0, 0);
-    return c >= s && c <= e;
+  const cost = ((edited.actualTime || 0) / 60) * HOURLY_RATE;
+  const overPrice = !!edited.agreedPrice && cost > edited.agreedPrice;
+  const overTime = !!edited.totalTime && (edited.actualTime || 0) > edited.totalTime;
+
+  const save = async () => { setSaving(true); await onSave(edited); setSaving(false); onClose(); };
+  const remove = async () => {
+    if (!window.confirm(t('confirmDelete', { name: project.projectName }))) return;
+    await onDelete(project);
+    onClose();
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-jewelry-gold/20 overflow-hidden flex flex-col h-[520px]">
-      <div className="p-4 flex items-center justify-between border-b border-amber-100 bg-amber-50/30">
-        <h3 className="font-serif font-bold text-xl text-jewelry-copper capitalize">
-          {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-        </h3>
-        <div className="flex gap-2">
-          <button onClick={() => onNavigate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-            className="p-2 hover:bg-white hover:shadow-sm rounded-lg border border-transparent hover:border-jewelry-gold/30 transition text-jewelry-bronze">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button onClick={() => onNavigate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-            className="p-2 hover:bg-white hover:shadow-sm rounded-lg border border-transparent hover:border-jewelry-gold/30 transition text-jewelry-bronze">
-            <ChevronRight className="w-5 h-5" />
-          </button>
+    <Modal onClose={onClose} title={t('editProject')} subtitle={`${edited.client} · ${TYPE_LABEL[edited.sheetType]}`}
+      footer={<>
+        <Button variant="ghost" onClick={remove} icon={<Trash2 className="h-4 w-4" />} className="mr-auto text-red-600 hover:bg-red-50">{t('deleteProject')}</Button>
+        <Button variant="secondary" onClick={onClose}>{t('cancel')}</Button>
+        <Button onClick={save} loading={saving}>{t('saveChanges')}</Button>
+      </>}>
+      <div className="space-y-5">
+        <div className="flex gap-1 rounded-xl bg-cream-100 p-1">
+          {PROJECT_STATUSES.map(s => (
+            <button key={s} onClick={() => set('status', s)}
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${edited.status === s ? 'bg-white text-copper-700 shadow-sm' : 'text-ink-500 hover:text-ink-800'}`}>
+              {t(statusKey(s))}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label={t('projectName')} className="sm:col-span-2">
+            <input className="input" value={edited.projectName} onChange={e => set('projectName', e.target.value)} />
+          </Field>
+          <Field label={t('client')}>
+            <input className="input" value={edited.client || ''} onChange={e => set('client', e.target.value)} />
+          </Field>
+          <Field label={t('assignedTo')}>
+            <select className="input" value={edited.assignedTo || ''} onChange={e => set('assignedTo', e.target.value || undefined)}>
+              <option value="">{t('unassigned')}</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </Field>
+          <Field label={t('deadline')}>
+            <input type="date" className="input" value={edited.deadline || ''} onChange={e => set('deadline', e.target.value || undefined)} />
+            <div className="mt-2"><DeadlineChip deadline={edited.deadline} done={edited.status === 'Completed'} /></div>
+          </Field>
+          <Field label={t('actualTime')} hint={edited.totalTime ? t('ofEstimated', { est: fmtMinutes(edited.totalTime) }) : undefined}>
+            <input type="number" min={0} className="input" value={edited.actualTime ?? 0} onChange={e => set('actualTime', Number(e.target.value))} />
+            {!!edited.totalTime && (
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-cream-200">
+                <div className={`h-full transition-all ${overTime ? 'bg-red-500' : 'bg-copper-500'}`} style={{ width: `${Math.min(((edited.actualTime || 0) / edited.totalTime) * 100, 100)}%` }} />
+              </div>
+            )}
+          </Field>
+        </div>
+
+        <div className="rounded-2xl border border-gold-200 bg-gold-50/60 p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <label className="label mb-0">{t('agreedPrice')}</label>
+            {(overPrice || overTime) && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                <AlertTriangle className="h-3 w-3" />{overPrice ? t('priceAlert') : t('overEstimate')}
+              </span>
+            )}
+          </div>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-serif text-sm font-semibold text-copper-600">CHF</span>
+            <input type="number" min={0} className="input pl-14 font-serif text-xl font-semibold" value={edited.agreedPrice ?? ''} onChange={e => set('agreedPrice', e.target.value === '' ? undefined : Number(e.target.value))} />
+          </div>
+          <p className="mt-2 text-xs text-ink-500">{t('estimatedCost', { rate: HOURLY_RATE })}: <span className={`font-semibold ${overPrice ? 'text-red-600' : 'text-ink-800'}`}>{fmtNumber(cost)} CHF</span></p>
         </div>
       </div>
-      <div className="grid grid-cols-7 text-center border-b border-amber-50">
-        {['Dl', 'Dm', 'Dc', 'Dj', 'Dv', 'Ds', 'Dg'].map(d => (
-          <div key={d} className="py-2 text-xs font-bold text-jewelry-brass uppercase tracking-widest">{d}</div>
-        ))}
+    </Modal>
+  );
+};
+
+// --- Calendar ----------------------------------------------------------------
+
+const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+
+const CalendarView: React.FC<{ projects: Project[]; date: Date; onNavigate: (d: Date) => void; onSelect: (p: Project) => void }> = ({ projects, date, onNavigate, onSelect }) => {
+  const { t, locale } = useTranslation();
+  const year = date.getFullYear(), month = date.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = (new Date(year, month, 1).getDay() + 6) % 7; // Monday first
+  const cells = Array.from({ length: Math.ceil((firstDay + daysInMonth) / 7) * 7 }, (_, i) => {
+    const n = i - firstDay + 1;
+    return n > 0 && n <= daysInMonth ? n : null;
+  });
+  const todayISO = toISODate(new Date());
+
+  const spans = useMemo(() => projects.map(p => ({
+    p,
+    start: p.date.substring(0, 10),
+    end: p.deadline || p.date.substring(0, 10),
+    color: colorFor(p.projectName),
+  })), [projects]);
+
+  return (
+    <Card bodyClassName="" title={date.toLocaleDateString(locale, { month: 'long', year: 'numeric' })} icon={<CalendarDays className="h-5 w-5" />}
+      action={<div className="flex gap-1">
+        <button onClick={() => onNavigate(new Date(year, month - 1, 1))} aria-label={t('previousMonth')} className="rounded-lg p-1.5 text-ink-500 hover:bg-cream-100"><ChevronLeft className="h-5 w-5" /></button>
+        <button onClick={() => onNavigate(new Date())} className="rounded-lg px-2 py-1 text-xs font-semibold text-ink-500 hover:bg-cream-100">{t('today')}</button>
+        <button onClick={() => onNavigate(new Date(year, month + 1, 1))} aria-label={t('nextMonth')} className="rounded-lg p-1.5 text-ink-500 hover:bg-cream-100"><ChevronRight className="h-5 w-5" /></button>
+      </div>}>
+      <div className="grid grid-cols-7 border-b border-cream-200 bg-cream-50 text-center">
+        {DAY_KEYS.map(k => <div key={k} className="py-2 text-[11px] font-bold uppercase tracking-wider text-ink-400">{t(k)}</div>)}
       </div>
-      <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-gray-50/20">
-        {calendarDays.map((day, idx) => {
-          const dayDate = day ? new Date(currentDate.getFullYear(), currentDate.getMonth(), day) : null;
-          const dayProjects = dayDate ? projects.filter(p => {
-            const s = new Date(p.date);
-            const e = p.deadline ? new Date(p.deadline) : new Date(s.getTime() + 86400000);
-            return isInRange(dayDate, s, e);
-          }) : [];
+      <div className="grid grid-cols-7">
+        {cells.map((day, idx) => {
+          const iso = day ? toISODate(new Date(year, month, day)) : '';
+          const items = day ? spans.filter(s => iso >= s.start && iso <= s.end) : [];
+          const isToday = iso === todayISO;
           return (
-            <div key={idx} className={`border-b border-r border-gray-100 p-1 min-h-[70px] ${day ? 'bg-white hover:bg-amber-50/30' : 'bg-gray-50/40'}`}>
+            <div key={idx} className={`min-h-[76px] border-b border-r border-cream-200 py-1 ${day ? (idx % 7 >= 5 ? 'bg-cream-50/70' : 'bg-white') : 'bg-cream-100/40'} ${idx % 7 === 6 ? 'border-r-0' : ''} ${isToday ? 'bg-gold-50/40' : ''}`}>
               {day && (
                 <>
-                  <span className={`text-xs font-medium block mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isSameDay(new Date(), dayDate!) ? 'bg-jewelry-gold text-white' : 'text-gray-400'}`}>
-                    {day}
-                  </span>
-                  <div className="space-y-0.5 overflow-y-auto max-h-[60px]">
-                    {dayProjects.slice(0, 3).map(p => (
-                      <div key={p.id} onClick={e => { e.stopPropagation(); onSelectProject(p); }}
-                        className="text-[9px] px-1.5 py-0.5 rounded cursor-pointer truncate hover:brightness-110 transition"
-                        style={{ backgroundColor: p.color || '#cd7f32', color: '#fff' }}
-                        title={p.projectName}>
-                        {isSameDay(new Date(p.date), dayDate!) && <span className="font-semibold">{p.projectName}</span>}
-                      </div>
-                    ))}
-                    {dayProjects.length > 3 && <div className="text-[9px] text-jewelry-bronze pl-1">+{dayProjects.length - 3}</div>}
+                  <span className={`mx-1 mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? 'bg-ink-900 text-gold-300' : 'text-ink-500'}`}>{day}</span>
+                  <div className="space-y-[3px]">
+                    {items.slice(0, 3).map(s => {
+                      const isStart = iso === s.start, isEnd = iso === s.end;
+                      return (
+                        <button key={s.p.id} onClick={() => onSelect(s.p)} title={`${s.p.projectName} · ${s.p.client}`}
+                          className={`block h-[18px] truncate px-1.5 text-left text-[10px] font-semibold leading-[18px] text-white transition hover:brightness-110 ${isStart ? 'ml-1 rounded-l-md' : ''} ${isEnd ? 'rounded-r-md' : ''} ${isStart && isEnd ? 'w-[calc(100%-8px)]' : isStart || isEnd ? 'w-[calc(100%-4px)]' : 'w-full'} ${isStart ? '' : 'opacity-70'}`}
+                          style={{ backgroundColor: s.color }}>
+                          {isStart ? s.p.projectName : '\u00a0'}
+                        </button>
+                      );
+                    })}
+                    {items.length > 3 && <p className="pl-2 text-[10px] text-ink-400">+{items.length - 3} {t('more')}</p>}
                   </div>
                 </>
               )}
@@ -202,160 +197,105 @@ const CalendarView = ({ projects, currentDate, onNavigate, onSelectProject, user
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 };
 
-// --- Expandable Project Row with Timer ---
-const ProjectRow = ({ project, users, onSelect, onProjectUpdate }: {
-  key?: string; project: Project; users: any[]; onSelect: () => void; onProjectUpdate: (p: Project) => void;
-}) => {
-  const { t } = useTranslation();
-  const { isDemoMode } = useDemo();
-  const [expanded, setExpanded] = useState(false);
-  const [elapsed, setElapsed] = useState(0); // seconds
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const hourlyRate = 120;
+// --- Project row -------------------------------------------------------------
 
-  const isTimerActive = !!project.timerStartedAt;
-
-  // Calcula el temps actual (temps base + timer actiu)
-  const currentMinutes = () => {
-    const base = project.actualTime || 0;
-    if (!project.timerStartedAt) return base;
-    const extra = (Date.now() - new Date(project.timerStartedAt).getTime()) / 60000;
-    return base + extra;
-  };
-
+const useElapsed = (project: Project) => {
+  const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
-    if (isTimerActive) {
-      const update = () => setElapsed(Math.floor(currentMinutes() * 60));
-      update();
-      intervalRef.current = setInterval(update, 1000);
-    } else {
-      setElapsed(Math.floor((project.actualTime || 0) * 60));
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isTimerActive, project.timerStartedAt, project.actualTime]);
+    const calc = () => {
+      const base = (project.actualTime || 0) * 60;
+      const extra = project.timerStartedAt ? (Date.now() - new Date(project.timerStartedAt).getTime()) / 1000 : 0;
+      setElapsed(Math.floor(base + extra));
+    };
+    calc();
+    if (!project.timerStartedAt) return;
+    const id = window.setInterval(calc, 1000);
+    return () => window.clearInterval(id);
+  }, [project.timerStartedAt, project.actualTime]);
+  return elapsed;
+};
 
-  const handleStartTimer = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isDemoMode) await startTimer(project.id);
-    onProjectUpdate({ ...project, timerStartedAt: new Date().toISOString() });
-  };
-
-  const handleStopTimer = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isDemoMode) {
-      const elapsedMin = (Date.now() - new Date(project.timerStartedAt!).getTime()) / 60000;
-      onProjectUpdate({ ...project, actualTime: Math.round(((project.actualTime || 0) + elapsedMin) * 10) / 10, timerStartedAt: undefined });
-    } else {
-      const updated = await stopTimer(project);
-      if (updated) onProjectUpdate(updated);
-    }
-  };
-
-  const assignedUser = users.find(u => u.id === project.assignedTo);
-  const totalMinutes = elapsed / 60;
-  const estCost = Math.round(totalMinutes / 60 * hourlyRate);
-  const progress = project.totalTime ? Math.min((totalMinutes / project.totalTime) * 100, 100) : 0;
-  const overBudget = project.agreedPrice && estCost > project.agreedPrice;
+const ProjectRow: React.FC<{
+  project: Project; user?: User; workshopName: string;
+  onEdit: () => void; onStart: () => void; onStop: () => void; onStatus: (s: ProjectStatus) => void;
+}> = ({ project, user, workshopName, onEdit, onStart, onStop, onStatus }) => {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const elapsed = useElapsed(project);
+  const running = !!project.timerStartedAt;
+  const minutes = elapsed / 60;
+  const cost = Math.round((minutes / 60) * HOURLY_RATE);
+  const progress = project.totalTime ? Math.min((minutes / project.totalTime) * 100, 100) : 0;
+  const overBudget = !!project.agreedPrice && cost > project.agreedPrice;
 
   return (
-    <div className={`rounded-xl border transition-all ${isTimerActive ? 'border-green-300 bg-green-50/30' : 'border-gray-100 bg-white hover:bg-amber-50/20'}`}>
-      {/* Main row */}
-      <div className="flex items-center gap-3 p-3 cursor-pointer" onClick={() => setExpanded(v => !v)}>
-        <div className="w-3 h-3 rounded-full shadow-sm ring-1 ring-white flex-shrink-0" style={{ backgroundColor: project.color }} />
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-gray-800 truncate">{project.projectName}</p>
-          <p className="text-xs text-gray-400 truncate">{project.client} · {project.sheetType}</p>
+    <div className={`rounded-xl border transition-colors ${running ? 'border-emerald-200 bg-emerald-50/40' : 'border-cream-200 bg-white hover:border-gold-200'}`}>
+      <button onClick={() => setExpanded(v => !v)} className="flex w-full items-center gap-3 p-3 text-left" aria-expanded={expanded}>
+        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: colorFor(project.projectName) }} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-ink-900">{project.projectName}</p>
+          <p className="truncate text-xs text-ink-400">{project.client} · {TYPE_LABEL[project.sheetType]}</p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {assignedUser && (
-            <div className="w-6 h-6 rounded-full bg-jewelry-copper/10 flex items-center justify-center text-[10px] font-bold text-jewelry-copper border border-jewelry-copper/20">
-              {assignedUser.name.charAt(0)}
-            </div>
-          )}
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-            project.status === 'Completed' ? 'bg-green-50 text-green-700 border-green-200' :
-            project.status === 'In Progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-            'bg-gray-50 text-gray-600 border-gray-200'
-          }`}>
-            {t(project.status?.toLowerCase().replace(' ', '_'))}
-          </span>
-          {isTimerActive && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />}
-          {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-        </div>
-      </div>
+        <div className="hidden sm:block"><DeadlineChip deadline={project.deadline} done={project.status === 'Completed'} /></div>
+        {user && <Avatar name={user.name} size="sm" />}
+        <StatusBadge status={project.status} />
+        {running && <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />}
+        {expanded ? <ChevronUp className="h-4 w-4 text-ink-300" /> : <ChevronDown className="h-4 w-4 text-ink-300" />}
+      </button>
 
-      {/* Expanded panel */}
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {expanded && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
-              {/* Timer */}
-              <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
+            <div className="space-y-3 border-t border-cream-200 px-4 pb-4 pt-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-cream-50 p-3">
                 <div>
-                  <p className="text-xs text-gray-500 font-medium mb-0.5">{isTimerActive ? t('timerActive') : t('elapsedTime')}</p>
-                  <p className={`font-mono text-xl font-bold ${isTimerActive ? 'text-green-600' : 'text-gray-700'}`}>
-                    {fmtSeconds(elapsed)}
-                  </p>
+                  <p className="text-xs font-medium text-ink-500">{running ? t('timerActive') : t('elapsedTime')}</p>
+                  <p className={`font-mono text-2xl font-semibold tabular-nums ${running ? 'text-emerald-600' : 'text-ink-900'}`}>{fmtClock(elapsed)}</p>
                 </div>
-                {isTimerActive ? (
-                  <button onClick={handleStopTimer}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition shadow-sm">
-                    <Square className="w-4 h-4" fill="white" />
-                    {t('stopTimer')}
-                  </button>
-                ) : (
-                  <button onClick={handleStartTimer}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm transition shadow-sm">
-                    <Play className="w-4 h-4" fill="white" />
-                    {t('startTimer')}
-                  </button>
-                )}
+                {running
+                  ? <Button variant="danger" size="sm" onClick={onStop} icon={<Square className="h-3.5 w-3.5" fill="currentColor" />}>{t('stopTimer')}</Button>
+                  : <Button variant="success" size="sm" onClick={onStart} icon={<Play className="h-3.5 w-3.5" fill="currentColor" />}>{t('startTimer')}</Button>}
               </div>
 
-              {/* Progress */}
-              {project.totalTime && (
+              {!!project.totalTime && (
                 <div>
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>{fmtTime(totalMinutes)} / {fmtTime(project.totalTime)}</span>
-                    <span className={overBudget ? 'text-red-500 font-bold' : ''}>{Math.round(progress)}%</span>
+                  <div className="mb-1 flex justify-between text-xs text-ink-500">
+                    <span>{fmtMinutes(minutes)} / {fmtMinutes(project.totalTime)}</span>
+                    <span className={progress >= 100 ? 'font-semibold text-red-600' : ''}>{Math.round(progress)}%</span>
                   </div>
-                  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${progress >= 100 ? 'bg-red-400' : 'bg-jewelry-copper'}`}
-                      style={{ width: `${progress}%` }} />
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-cream-200">
+                    <div className={`h-full rounded-full transition-all ${progress >= 100 ? 'bg-red-500' : 'bg-copper-500'}`} style={{ width: `${progress}%` }} />
                   </div>
                 </div>
               )}
 
-              {/* Cost */}
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white border border-gray-100 rounded-lg p-2">
-                  <p className="text-gray-400">{t('estimatedCost')}</p>
-                  <p className={`font-bold text-base ${overBudget ? 'text-red-500' : 'text-gray-800'}`}>{estCost} CHF</p>
+                <div className="rounded-lg border border-cream-200 p-2.5">
+                  <p className="text-ink-400">{t('estimatedCost', { rate: HOURLY_RATE })}</p>
+                  <p className={`text-base font-semibold ${overBudget ? 'text-red-600' : 'text-ink-900'}`}>{fmtNumber(cost)} CHF</p>
                 </div>
-                <div className="bg-white border border-gray-100 rounded-lg p-2">
-                  <p className="text-gray-400">{t('agreedPrice')}</p>
-                  <p className="font-bold text-base text-jewelry-copper">{project.agreedPrice ?? '—'} CHF</p>
+                <div className="rounded-lg border border-cream-200 p-2.5">
+                  <p className="text-ink-400">{t('agreedPrice')}</p>
+                  <p className="text-base font-semibold text-copper-600">{project.agreedPrice ? `${fmtNumber(project.agreedPrice)} CHF` : '—'}</p>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-2">
-                <button onClick={e => { e.stopPropagation(); onSelect(); }}
-                  className="flex-1 text-center text-xs text-jewelry-copper hover:text-jewelry-bronze font-medium py-1.5 border border-jewelry-gold/30 rounded-lg hover:bg-amber-50 transition">
-                  {t('editProject')} →
-                </button>
-                <button
-                  onClick={e => { e.stopPropagation(); exportProjectQuote(project); }}
-                  className="flex items-center gap-1.5 text-xs text-amber-700 hover:text-amber-900 font-medium py-1.5 px-3 border border-amber-200 rounded-lg hover:bg-amber-50 transition"
-                >
-                  <FileDown className="w-3.5 h-3.5" />
-                  PDF
-                </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex gap-1 rounded-lg bg-cream-100 p-0.5">
+                  {PROJECT_STATUSES.map(s => (
+                    <button key={s} onClick={() => onStatus(s)} className={`rounded-md px-2 py-1 text-[11px] font-semibold transition ${project.status === s ? 'bg-white text-copper-700 shadow-sm' : 'text-ink-500 hover:text-ink-800'}`}>
+                      {t(statusKey(s))}
+                    </button>
+                  ))}
+                </div>
+                <div className="ml-auto flex gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => exportProjectQuote(project, workshopName)} icon={<FileDown className="h-3.5 w-3.5" />}>PDF</Button>
+                  <Button variant="secondary" size="sm" onClick={onEdit} icon={<Pencil className="h-3.5 w-3.5" />}>{t('edit')}</Button>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -365,221 +305,147 @@ const ProjectRow = ({ project, users, onSelect, onProjectUpdate }: {
   );
 };
 
-// --- Dashboard ---
-const Dashboard = () => {
-  const { t } = useTranslation();
-  const { users: realUsers } = useUsers();
-  const { isDemoMode, demoProjects, demoUsers, updateDemoProject } = useDemo();
-  const users = isDemoMode ? demoUsers : realUsers;
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'week' | 'month' | 'year' | 'all'>('month');
+// --- Dashboard ---------------------------------------------------------------
+
+const Dashboard: React.FC = () => {
+  const { t, locale } = useTranslation();
+  const { users, userById } = useUsers();
+  const { toast } = useToast();
+  const { workshopName } = useData();
+  const { projects, loading, update, remove, startTimer, stopTimer, setStatus } = useProjects();
+
+  const [period, setPeriod] = useState<Period>('month');
+  const [status, setStatusFilter] = useState<StatusFilter>('all');
   const [userFilter, setUserFilter] = useState('all');
+  const [query, setQuery] = useState('');
   const [calendarDate, setCalendarDate] = useState(new Date());
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selected, setSelected] = useState<Project | null>(null);
 
-  const colorize = (data: Project[]) => data.map(p => {
-    const hash = [...(p.projectName || '')].reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    return { ...p, color: `hsl(${25 + (hash % 25)}, ${70 + (hash % 20)}%, ${45 + (hash % 15)}%)` };
-  });
-
-  const refreshData = async () => {
-    setLoading(true);
-    if (isDemoMode) {
-      setProjects(colorize(demoProjects));
-    } else {
-      const data = await getProjects();
-      setProjects(colorize(data));
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => { refreshData(); }, [isDemoMode, demoProjects]);
-
-  const updateProjectInState = (updated: Project) => {
-    setProjects(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated, color: p.color } : p));
-    if (selectedProject?.id === updated.id) setSelectedProject({ ...updated, color: selectedProject.color });
-    if (isDemoMode) updateDemoProject(updated);
-  };
-
-  useEffect(() => {
-    const now = new Date();
-    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
-    const day = todayStart.getDay();
-    const dist = day === 0 ? 6 : day - 1;
-    const monday = new Date(todayStart); monday.setDate(todayStart.getDate() - dist);
-    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-
-    setFilteredProjects(projects.filter(p => {
+  const filtered = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23, 59, 59, 999);
+    const q = query.trim().toLowerCase();
+    return projects.filter(p => {
       if (userFilter !== 'all' && p.assignedTo !== userFilter) return false;
-      const d = new Date(p.date); d.setHours(0, 0, 0, 0);
-      if (filter === 'all') return true;
-      if (filter === 'year') return d.getFullYear() === todayStart.getFullYear();
-      if (filter === 'month') return d.getMonth() === todayStart.getMonth() && d.getFullYear() === todayStart.getFullYear();
-      if (filter === 'week') return d >= monday && d <= sunday;
+      if (status !== 'all' && p.status !== status) return false;
+      if (q && !`${p.projectName} ${p.client}`.toLowerCase().includes(q)) return false;
+      const d = new Date(p.date);
+      if (period === 'year') return d.getFullYear() === today.getFullYear();
+      if (period === 'month') return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
+      if (period === 'week') return d >= monday && d <= sunday;
       return true;
-    }));
-  }, [filter, userFilter, projects]);
+    });
+  }, [projects, period, status, userFilter, query]);
 
-  const revenue = filteredProjects.filter(p => p.status === 'Completed').reduce((s, p) => s + (p.agreedPrice || 0), 0);
-  const inProgressCount = filteredProjects.filter(p => p.status === 'In Progress').length;
-  const completedCount = filteredProjects.filter(p => p.status === 'Completed').length;
-  const pendingCount = filteredProjects.filter(p => p.status === 'Pending').length;
+  const revenue = filtered.filter(p => p.status === 'Completed').reduce((s, p) => s + (p.agreedPrice || 0), 0);
+  const counts = {
+    open: filtered.filter(p => p.status !== 'Completed').length,
+    completed: filtered.filter(p => p.status === 'Completed').length,
+    plannedHours: filtered.filter(p => p.status !== 'Completed').reduce((s, p) => s + Math.max(0, (p.totalTime || 0) - (p.actualTime || 0)), 0) / 60,
+  };
+  const deadlines = useMemo(() => upcomingDeadlines(projects, 6), [projects]);
+  const overdueCount = deadlines.filter(p => (daysUntil(p.deadline) ?? 1) < 0).length;
 
-  const workloadData = {
+  const workloadData = useMemo(() => ({
     labels: users.map(u => u.name),
     datasets: [{
-      label: 'Hours',
-      data: users.map(u => filteredProjects.filter(p => p.assignedTo === u.id && p.status !== 'Completed').reduce((a, p) => a + ((p.totalTime || 0) / 60), 0)),
-      backgroundColor: '#cd7f32', borderRadius: 4, barThickness: 20,
+      data: users.map(u => projects.filter(p => p.assignedTo === u.id && p.status !== 'Completed').reduce((a, p) => a + Math.max(0, (p.totalTime || 0) - (p.actualTime || 0)) / 60, 0)),
+      backgroundColor: '#C9A24D', hoverBackgroundColor: '#A8663A', borderRadius: 6, barThickness: 22,
     }],
-  };
+  }), [users, projects]);
 
-  const revenueByMonth = projects.filter(p => p.status === 'Completed').reduce((acc, p) => {
-    const d = new Date(p.date);
-    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    acc[k] = (acc[k] || 0) + (p.agreedPrice || 0);
-    return acc;
-  }, {} as Record<string, number>);
-  const sortedKeys = Object.keys(revenueByMonth).sort();
-  const revenueChartData = {
-    labels: sortedKeys,
-    datasets: [{
-      label: 'Revenue (CHF)',
-      data: sortedKeys.map(k => revenueByMonth[k]),
-      borderColor: '#b87333',
-      backgroundColor: 'rgba(255, 215, 0, 0.15)',
-      pointBackgroundColor: '#b5a642',
-      pointBorderColor: '#fff',
-      pointRadius: 4, tension: 0.4, fill: true,
-    }],
-  };
+  const revenueData = useMemo(() => {
+    const byMonth = new Map<string, number>();
+    for (const p of projects) if (p.status === 'Completed') byMonth.set(p.date.substring(0, 7), (byMonth.get(p.date.substring(0, 7)) || 0) + (p.agreedPrice || 0));
+    const keys = [...byMonth.keys()].sort().slice(-12);
+    return {
+      labels: keys.map(k => new Date(`${k}-01T12:00:00`).toLocaleDateString(locale, { month: 'short', year: '2-digit' })),
+      datasets: [{ data: keys.map(k => byMonth.get(k)!), borderColor: '#A8663A', backgroundColor: 'rgba(201,162,77,0.18)', pointBackgroundColor: '#C9A24D', pointBorderColor: '#fff', pointRadius: 3, tension: 0.35, fill: true }],
+    };
+  }, [projects, locale]);
 
-  const activeProjects = filteredProjects.filter(p => p.status !== 'Completed');
-  const activeTimers = projects.filter(p => p.timerStartedAt).length;
+  const save = useCallback(async (p: Project) => { await update(p); toast(t('projectUpdated')); }, [update, toast, t]);
+  const del = useCallback(async (p: Project) => { await remove(p.id); toast(t('projectDeleted'), 'info'); }, [remove, toast, t]);
 
   return (
     <div className="space-y-6 pb-10">
       <AnimatePresence>
-        {selectedProject && (
-          <ProjectDetailModal
-            project={selectedProject}
-            onClose={() => setSelectedProject(null)}
-            onUpdate={updateProjectInState}
-          />
-        )}
+        {selected && <ProjectEditModal project={selected} users={users} onClose={() => setSelected(null)} onSave={save} onDelete={del} />}
       </AnimatePresence>
 
-      {/* Controls */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-jewelry-gold/20">
-        <div className="flex bg-gray-50 rounded-xl p-1 gap-1 shadow-inner">
-          {(['week', 'month', 'year', 'all'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filter === f ? 'bg-gradient-to-r from-jewelry-gold to-jewelry-brass text-white shadow-md scale-105' : 'text-gray-500 hover:text-jewelry-copper hover:bg-white'}`}>
-              {t(`filter_${f}`)}
-            </button>
-          ))}
+      {/* Toolbar */}
+      <div className="card flex flex-col gap-3 p-3 lg:flex-row lg:items-center">
+        <Segmented<Period> value={period} onChange={setPeriod} options={(['week', 'month', 'year', 'all'] as Period[]).map(v => ({ value: v, label: t(`filter_${v}`) }))} />
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-300" />
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('searchPlaceholder')} className="input pl-9" aria-label={t('search')} />
         </div>
-        <div className="flex items-center gap-2 w-full lg:w-auto">
-          {activeTimers > 0 && (
-            <div className="flex items-center gap-1.5 bg-green-100 text-green-700 px-3 py-2 rounded-xl text-xs font-bold border border-green-200">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              {activeTimers} timer{activeTimers > 1 ? 's' : ''} actiu{activeTimers > 1 ? 's' : ''}
-            </div>
-          )}
-          <div className="relative w-full lg:w-56">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-jewelry-copper" />
-            <select value={userFilter} onChange={e => setUserFilter(e.target.value)}
-              className="w-full pl-10 pr-8 py-2.5 bg-white border border-jewelry-gold/30 rounded-xl text-sm font-semibold text-gray-700 focus:ring-2 focus:ring-jewelry-gold outline-none appearance-none cursor-pointer hover:border-jewelry-gold transition shadow-sm">
-              <option value="all">{t('allUsers')}</option>
-              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          </div>
-        </div>
+        <select value={status} onChange={e => setStatusFilter(e.target.value as StatusFilter)} className="input lg:w-44" aria-label={t('status')}>
+          <option value="all">{t('statusAll')}</option>
+          {PROJECT_STATUSES.map(s => <option key={s} value={s}>{t(statusKey(s))}</option>)}
+        </select>
+        <select value={userFilter} onChange={e => setUserFilter(e.target.value)} className="input lg:w-48" aria-label={t('filterByUser')}>
+          <option value="all">{t('allUsers')}</option>
+          {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+        </select>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Left: Calendar + Project List */}
-        <div className="xl:col-span-2 space-y-6">
-          <CalendarView
-            projects={filteredProjects}
-            currentDate={calendarDate}
-            onNavigate={setCalendarDate}
-            onSelectProject={setSelectedProject}
-            users={users}
-          />
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <Kpi tone="brand" label={t('completedRevenue')} value={<>{fmtNumber(revenue)} <span className="text-base font-sans font-medium opacity-80">CHF</span></>} hint={t('revenueHint')} icon={<Coins className="h-5 w-5" />} />
+        <Kpi label={t('openProjects')} value={counts.open} hint={`${t('projectsInProgress')} · ${t(`filter_${period}`)}`} icon={<Briefcase className="h-5 w-5" />} />
+        <Kpi label={t('completed')} value={counts.completed} hint={t(`filter_${period}`)} icon={<CheckCircle2 className="h-5 w-5" />} />
+        <Kpi label={t('hoursPlanned')} value={`${fmtNumber(counts.plannedHours, locale, 1)} h`} hint={t('openProjects')} icon={<Hourglass className="h-5 w-5" />} />
+      </div>
 
-          {/* Expandable Project List */}
-          <div className="bg-white rounded-2xl shadow-sm border border-jewelry-gold/20">
-            <div className="p-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10 flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-jewelry-copper" />
-              <h3 className="font-serif font-bold text-gray-800">{t('projectsInProgress')}</h3>
-              <span className="text-xs bg-jewelry-gold text-white font-bold px-2 py-0.5 rounded-full">{filteredProjects.length}</span>
-            </div>
-            <div className="p-3 space-y-2 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {loading ? (
-                <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-jewelry-gold" /></div>
-              ) : filteredProjects.length === 0 ? (
-                <p className="text-center text-gray-400 italic py-8">{t('noProjects')}</p>
-              ) : (
-                filteredProjects.map(p => (
-                  <ProjectRow
-                    key={p.id}
-                    project={p}
-                    users={users}
-                    onSelect={() => setSelectedProject(p)}
-                    onProjectUpdate={updateProjectInState}
-                  />
-                ))
-              )}
-            </div>
-          </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
+          <CalendarView projects={filtered} date={calendarDate} onNavigate={setCalendarDate} onSelect={setSelected} />
+
+          <Card title={t('projectsInProgress')} icon={<Briefcase className="h-5 w-5" />} bodyClassName="p-3"
+            action={<span className="rounded-full bg-cream-100 px-2.5 py-0.5 text-xs font-bold text-ink-700">{filtered.length}</span>}>
+            {loading ? <LoadingBlock /> : filtered.length === 0 ? (
+              <EmptyState icon={<Briefcase className="h-6 w-6" />} title={query ? t('noResults') : t('noProjects')} />
+            ) : (
+              <div className="scrollbar-thin max-h-[560px] space-y-2 overflow-y-auto pr-1">
+                {filtered.map(p => (
+                  <ProjectRow key={p.id} project={p} user={userById(p.assignedTo)} workshopName={workshopName}
+                    onEdit={() => setSelected(p)} onStart={() => startTimer(p)} onStop={() => stopTimer(p)} onStatus={s => setStatus(p, s)} />
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
 
-        {/* Right: KPIs + Chart */}
         <div className="space-y-6">
-          <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-            className="bg-gradient-to-br from-jewelry-copper via-jewelry-bronze to-jewelry-rosegold p-6 rounded-2xl shadow-xl text-white relative overflow-hidden">
-            <div className="relative z-10">
-              <p className="text-xs text-amber-100 font-bold uppercase tracking-wider mb-2">{t('completedRevenue')}</p>
-              <h3 className="text-4xl font-serif font-bold drop-shadow-md">
-                {revenue.toLocaleString('de-CH')} <span className="text-lg text-amber-100 font-sans font-medium">CHF</span>
-              </h3>
-            </div>
-            <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-jewelry-gold/20 rounded-full blur-2xl" />
-            <div className="absolute -left-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-xl" />
-          </motion.div>
+          <Card title={t('upcomingDeadlines')} icon={<Clock className="h-5 w-5" />} bodyClassName="p-2"
+            action={overdueCount > 0 && <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-700"><AlertTriangle className="h-3 w-3" />{overdueCount}</span>}>
+            {deadlines.length === 0 ? <EmptyState title={t('noDeadlines')} className="py-6" /> : (
+              <ul className="divide-y divide-cream-200">
+                {deadlines.map(p => (
+                  <li key={p.id}>
+                    <button onClick={() => setSelected(p)} className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-cream-50">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: colorFor(p.projectName) }} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-ink-900">{p.projectName}</span>
+                        <span className="block truncate text-xs text-ink-400">{p.client} · {fmtDate(p.deadline, locale, { day: '2-digit', month: 'short' })}</span>
+                      </span>
+                      <DeadlineChip deadline={p.deadline} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
 
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: t('pending'), count: pendingCount, icon: <Clock className="w-5 h-5" />, color: 'text-gray-600 bg-gray-50 border-gray-100' },
-              { label: t('in_progress'), count: inProgressCount, icon: <Briefcase className="w-5 h-5 text-jewelry-copper" />, color: 'text-jewelry-copper bg-amber-50 border-amber-100' },
-              { label: t('completed'), count: completedCount, icon: <CheckCircle className="w-5 h-5 text-green-600" />, color: 'text-green-600 bg-green-50 border-green-100' },
-            ].map(({ label, count, icon, color }) => (
-              <motion.div key={label} initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                className="bg-white p-4 rounded-2xl shadow-sm border border-jewelry-gold/20 flex flex-col items-center text-center">
-                <div className={`p-2 w-fit rounded-xl mb-2 border ${color}`}>{icon}</div>
-                <h3 className="text-xl font-bold text-gray-800">{count}</h3>
-                <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest mt-1 truncate w-full">{label}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-jewelry-gold/20 h-[300px]">
-            <div className="flex items-center gap-2 mb-4">
-              {filter === 'all' ? <TrendingUp className="w-5 h-5 text-jewelry-copper" /> : <User className="w-5 h-5 text-jewelry-copper" />}
-              <h3 className="font-serif font-bold text-gray-800 text-base">{filter === 'all' ? 'Revenue Evolution' : t('weeklyWorkload')}</h3>
+          <Card title={period === 'all' ? t('revenueEvolution') : t('weeklyWorkload')} icon={period === 'all' ? <TrendingUp className="h-5 w-5" /> : <UsersIcon className="h-5 w-5" />}>
+            <div className="h-56">
+              {period === 'all'
+                ? <Line data={revenueData} options={CHART_OPTIONS} />
+                : <Bar data={workloadData} options={{ ...CHART_OPTIONS, scales: { ...CHART_OPTIONS.scales, y: { ...CHART_OPTIONS.scales.y, ticks: { ...CHART_OPTIONS.scales.y.ticks, callback: (v: unknown) => `${v} h` } } } }} />}
             </div>
-            <div className="h-[220px]">
-              {filter === 'all'
-                ? <Line data={revenueChartData} options={{ maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#f3f4f6' } }, x: { grid: { display: false } } } }} />
-                : <Bar data={workloadData} options={{ maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#f3f4f6' } }, x: { grid: { display: false } } } }} />
-              }
-            </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

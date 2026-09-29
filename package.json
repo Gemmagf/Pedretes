@@ -1,16 +1,16 @@
 {
   "name": "pedretes-manager",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
-    "axios": "^1.13.2",
     "chart.js": "^4.5.1",
     "framer-motion": "^12.23.25",
     "jspdf": "^4.2.1",
@@ -23,6 +23,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",
     "@types/node": "^22.19.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.22",
     "postcss": "^8.5.6",
@@ -30,5 +32,6 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
-  }
+  },
+  "description": "Atelier-Management für Goldschmiede und Handwerksbetriebe – Aufträge, Zeiterfassung, Rentabilität und Offerten."
 }

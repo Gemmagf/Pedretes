@@ -1,48 +1,47 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
-import {
-  getUsers,
-  addUser as addUserDB,
-  updateUserHours as updateUserHoursDB,
-  updateUserAvailability as updateUserAvailabilityDB,
-} from '../services/supabase';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import type { User } from '../types';
+import { useData } from './DataContext';
 
 interface UsersContextType {
   users: User[];
-  addUser: (name: string) => void;
-  updateUserHours: (id: string, hours: number) => void;
-  updateUserAvailability: (id: string, workingDays: number[], daysOff: string[]) => void;
+  loading: boolean;
+  addUser: (name: string) => Promise<void>;
+  updateUser: (id: string, patch: Partial<User>) => Promise<void>;
+  userById: (id?: string) => User | undefined;
 }
 
 const UsersContext = createContext<UsersContextType | undefined>(undefined);
 
 export const UsersProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { store } = useData();
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getUsers().then(setUsers);
-  }, []);
+    let active = true;
+    const load = () => store.listUsers().then(u => { if (active) { setUsers(u); setLoading(false); } });
+    setLoading(true);
+    load();
+    const unsubscribe = store.subscribe(load);
+    return () => { active = false; unsubscribe(); };
+  }, [store]);
 
-  const addUser = async (name: string) => {
-    const newUser = await addUserDB(name);
-    if (newUser) setUsers(prev => [...prev, newUser]);
-  };
+  const addUser = useCallback(async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    await store.addUser(trimmed);
+  }, [store]);
 
-  const updateUserHours = async (id: string, hours: number) => {
-    await updateUserHoursDB(id, hours);
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, extraHours: hours } : u));
-  };
+  const updateUser = useCallback(async (id: string, patch: Partial<User>) => {
+    setUsers(prev => prev.map(u => (u.id === id ? { ...u, ...patch } : u)));
+    await store.updateUser(id, patch);
+  }, [store]);
 
-  const updateUserAvailability = async (id: string, workingDays: number[], daysOff: string[]) => {
-    await updateUserAvailabilityDB(id, workingDays, daysOff);
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, workingDays, daysOff } : u));
-  };
+  const userById = useCallback((id?: string) => users.find(u => u.id === id), [users]);
 
-  return (
-    <UsersContext.Provider value={{ users, addUser, updateUserHours, updateUserAvailability }}>
-      {children}
-    </UsersContext.Provider>
-  );
+  const value = useMemo(() => ({ users, loading, addUser, updateUser, userById }), [users, loading, addUser, updateUser, userById]);
+
+  return <UsersContext.Provider value={value}>{children}</UsersContext.Provider>;
 };
 
 export const useUsers = () => {

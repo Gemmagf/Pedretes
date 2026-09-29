@@ -1,48 +1,43 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Project, User } from '../types';
-import { DemoAnswers, generateDemoProjects, generateDemoUsers } from '../utils/demoData';
+import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
+import { type DemoAnswers, generateDemoProjects, generateDemoUsers } from '../utils/demoData';
+import { createMemoryStore, type Store } from '../services/store';
 
 interface DemoContextType {
   isDemoMode: boolean;
   demoAnswers: DemoAnswers | null;
-  demoProjects: Project[];
-  demoUsers: User[];
+  demoStore: Store | null;
   enterDemo: (answers: DemoAnswers) => void;
   exitDemo: () => void;
-  updateDemoProject: (project: Project) => void;
 }
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined);
 
 export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [demoAnswers, setDemoAnswers] = useState<DemoAnswers | null>(null);
-  const [demoProjects, setDemoProjects] = useState<Project[]>([]);
-  const [demoUsers, setDemoUsers] = useState<User[]>([]);
+  const [demoStore, setDemoStore] = useState<Store | null>(null);
 
-  const enterDemo = (answers: DemoAnswers) => {
+  const enterDemo = useCallback((answers: DemoAnswers) => {
+    const store = createMemoryStore({
+      kind: 'demo',
+      seed: () => {
+        const users = generateDemoUsers(answers);
+        return { users, projects: generateDemoProjects(answers, users) };
+      },
+    });
     setDemoAnswers(answers);
-    setDemoProjects(generateDemoProjects(answers));
-    setDemoUsers(generateDemoUsers(answers));
-    setIsDemoMode(true);
-  };
+    setDemoStore(store);
+  }, []);
 
-  const exitDemo = () => {
-    setIsDemoMode(false);
+  const exitDemo = useCallback(() => {
     setDemoAnswers(null);
-    setDemoProjects([]);
-    setDemoUsers([]);
-  };
+    setDemoStore(null);
+  }, []);
 
-  const updateDemoProject = (project: Project) => {
-    setDemoProjects(prev => prev.map(p => p.id === project.id ? project : p));
-  };
+  const value = useMemo(() => ({
+    isDemoMode: demoStore !== null, demoAnswers, demoStore, enterDemo, exitDemo,
+  }), [demoStore, demoAnswers, enterDemo, exitDemo]);
 
-  return (
-    <DemoContext.Provider value={{ isDemoMode, demoAnswers, demoProjects, demoUsers, enterDemo, exitDemo, updateDemoProject }}>
-      {children}
-    </DemoContext.Provider>
-  );
+  return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
 };
 
 export const useDemo = () => {

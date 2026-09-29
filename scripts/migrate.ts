@@ -2,8 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 
-const SUPABASE_URL = 'https://sinomclhlaqwahtidetp.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpbm9tY2xobGFxd2FodGlkZXRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MzUyMjYsImV4cCI6MjA5MTQxMTIyNn0.uO8o-YCs_CYh9ezR4GxamScEdHQSgjwMmhppBWLKQB4';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY;
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error('Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the environment.');
+  process.exit(1);
+}
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Parses "DD/MM/YYYY" or "DD/MM/YYYY HH:MM:SS" → "YYYY-MM-DD"
