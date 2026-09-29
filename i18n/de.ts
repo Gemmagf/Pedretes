@@ -17,9 +17,9 @@ export const de = {
   dashboardSubtitle: 'Aufträge, Termine und Auslastung auf einen Blick.',
   analyticsTitle: 'Analyse & Rentabilität',
   analyticsSubtitle: 'Umsatz, Stundensätze und Empfehlungen aus deinen Daten.',
-  allianceSubtitle: 'Alliance-Ringe: Zeit pro Stein × Anzahl Steine.',
-  fassungSubtitle: 'Einzelfassungen: Gesamtzeit und Materialien.',
-  paveSubtitle: 'Pavé-Arbeiten: Preis pro Stein und Layout.',
+  allianceSubtitle: 'Alliance-Ringe: Steingrösse, Stil und Preis pro Stein.',
+  fassungSubtitle: 'Fassungen: Steinform, Stil und Preis pro Stein.',
+  paveSubtitle: 'Pavé-Arbeiten: Pavé-Typ, Layout, Fixierung und Preis pro Stein.',
   teamTitle: 'Team & Verfügbarkeit',
   teamSubtitle: 'Arbeitstage, freie Tage und Kapazität pro Person.',
 
@@ -188,6 +188,7 @@ export const de = {
   byPerson: 'Leistung pro Person',
   completedCount: 'Abgeschlossen',
   openCount: 'Offen',
+  byPersonHint: 'Weise Aufträge einer Person zu (Projekt bearbeiten → Zugewiesen an), um Leistung pro Person zu sehen.',
   trackedHours: 'Erfasste Stunden',
 
   // Team

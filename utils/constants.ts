@@ -8,12 +8,12 @@ export const VAT_RATE = 0.081;
 export const GOLD_FALLBACK_CHF_PER_GRAM = 95;
 
 /** B2B clients of the atelier (Zürich jewellers). */
-export const CLIENTS = ['Beyer', 'Peclard', 'Lohri', 'Ann Perica', 'Messerer', 'Suenos', 'Meister'];
+export const CLIENTS = ['Beyer', 'Peclard', 'Lohri', 'Ann Perica', 'Messerer', 'Suenos', 'Meister', 'Steinlin', 'Flavia Tschanz', 'Maria Lutz'];
 
 export const STORAGE_KEYS = {
   language: 'pedretes.lang',
   session: 'pedretes.session',
-  localData: 'pedretes.local.v1',
+  localData: 'pedretes.local.v2',
 } as const;
 
 /** Local (offline) account. Data lives in the browser only. */

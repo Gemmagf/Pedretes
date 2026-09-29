@@ -91,6 +91,15 @@ const ProjectFormPage: React.FC<{ type: ProjectType }> = ({ type }) => {
         </Field>
       );
     }
+    if (f.kind === 'text') {
+      const listId = `${type}-${f.name}-options`;
+      return (
+        <Field key={f.name} label={t(f.labelKey)}>
+          <input list={listId} className="input" value={values[f.name]} onChange={e => set(f.name, e.target.value)} placeholder={t('selectPlaceholder')} />
+          <datalist id={listId}>{f.options?.map(o => <option key={o} value={o} />)}</datalist>
+        </Field>
+      );
+    }
     if (f.kind === 'select') {
       return (
         <Field key={f.name} label={t(f.labelKey)}>

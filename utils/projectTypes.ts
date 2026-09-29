@@ -11,7 +11,8 @@ export type FormValues = Record<FormFieldName | 'projectName' | 'agreedPrice', s
 export interface FieldDef {
   name: FormFieldName;
   labelKey: TranslationKey;
-  kind: 'select' | 'number' | 'date';
+  kind: 'select' | 'number' | 'date' | 'text';
+  /** Select options, or suggestions for a free-text field. */
   options?: string[];
   step?: string;
   min?: number;
@@ -33,17 +34,24 @@ export interface ProjectTypeConfig {
 
 const num = (s: string) => Number(s) || 0;
 
+/** The atelier prices per stone (labour included); time × rate is the fallback when no stone price is set. */
+const perStonePricing = (rate: number) => (v: FormValues, minutes: number): PriceLine[] => {
+  if (num(v.pricePerStone) && num(v.stoneCount)) {
+    return [{ key: 'stones', amount: num(v.pricePerStone) * num(v.stoneCount), detail: `${num(v.stoneCount)} × ${num(v.pricePerStone)} CHF` }];
+  }
+  return minutes > 0 ? [{ key: 'labour', amount: (minutes / 60) * rate, detail: `${(minutes / 60).toFixed(1)} h × ${rate} CHF` }] : [];
+};
+
+/** Options of the atelier's real order forms ("Formular Sareta"). */
 export const OPTIONS = {
-  allianceStoneTypes: ['weisse Diamanten', 'Korund + farbige Diamanten', 'empfindliche Steine'],
-  allianceMaterials: ['WG + GG + Roségold', 'Rotgold', 'Platin'],
-  allianceStyles: ['Fadenpavé', 'Arkaden', 'Fishtail', 'Fishtail gegenschnitt', 'Abgedeckt', 'Castel', 'Side by side', 'Kanalfassung'],
+  stoneTypes: ['weiße Diamanten', 'Korund + farbige Diamanten', 'empfindliche Steine'],
+  materials: ['WG + GG + Roségold', 'Rotgold', 'Platin'],
+  allianceStyles: ['Fadenpavé', 'Arkaden', 'Fishtail', 'Fishtail gegenschnitt', 'Abgedeckt', 'Castel', 'Side by side', 'Kanalfassung', 'Shared Prong'],
   allianceShapes: ['eckig', 'rund'],
-  fassungShapes: ['rund', 'oval', 'princess', 'emerald', 'marquise', 'pear', 'heart', 'cushion'],
-  fassungMaterials: ['WG', 'GG', 'Roségold', 'Platin'],
-  fassungStyles: ['Classic', 'Modern', 'Vintage', 'Micro-Pavé', 'Halo'],
-  fassungStoneTypes: ['Diamant', 'Saphir', 'Rubin', 'Smaragd', 'Sonstige'],
-  paveStyles: ['wildes Pavé', 'Fadenpavé', 'Fadenpavé verlauf', 'Arkade', 'Fishtail', 'Fishtail gegenschnitt', 'Abgedeckt', 'Castel', 'Side by side', 'Kanalfassung'],
-  paveLayouts: ['Lineal', 'Kreis', 'Rechteck', 'Oval', 'Freiform'],
+  fassungShapes: ['Rund', 'Oval', 'Kissen', 'Tropfen', 'Emerald', 'Asher', 'Baguette', 'Cabochon', 'Navette', 'Marquise', 'Sugarloaf', 'Prinzess', 'Herz', 'Radiant', 'Halbmond'],
+  fassungStyles: ['Geschlossen', 'runde Griffe', 'spitzige Griffe', 'Fassung "tächli" mit Tropfen oder Marquise', 'Eingerieben', 'extra dicke Griffe oder komplex zum einkitten'],
+  paveStyles: ['wildes Pavé', 'Fadenpavé', 'Fadenpavé verlauf', 'Honeycomb', 'Freiform verschnitten (z.B Ornamente)', 'Eingerieben', 'Eingerieben innen', 'Stern', 'Entourage spezial (z.B Arkade)', 'Abgedeckt', 'Arkade', 'Fishtail', 'Kanalfassung', 'Castel'],
+  paveLayouts: ['vorhanden', 'nicht vorhanden'],
   paveFixations: ['einfache Fixierung', 'komplexe Fixierung'],
 };
 
@@ -65,22 +73,15 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
     hourlyRate: HOURLY_RATE,
     fields: [
       common.client, common.assignedTo,
-      { name: 'stoneType', labelKey: 'stoneType', kind: 'select', options: OPTIONS.allianceStoneTypes },
-      { name: 'material', labelKey: 'material', kind: 'select', options: OPTIONS.allianceMaterials },
+      { name: 'stoneSize', labelKey: 'stoneSize', kind: 'number', min: 0, step: '0.1' },
+      { name: 'stoneType', labelKey: 'stoneType', kind: 'select', options: OPTIONS.stoneTypes },
+      { name: 'material', labelKey: 'material', kind: 'select', options: OPTIONS.materials },
       { name: 'style', labelKey: 'style', kind: 'select', options: OPTIONS.allianceStyles },
       { name: 'shape', labelKey: 'shape', kind: 'select', options: OPTIONS.allianceShapes },
-      common.stoneCount,
-      { name: 'stoneSize', labelKey: 'stoneSize', kind: 'number', min: 0, step: '0.1' },
-      { name: 'timePerStone', labelKey: 'timePerStone', kind: 'number', min: 0 },
-      common.pricePerStone, common.goldWeight, common.deadline,
+      common.stoneCount, common.totalTime, common.pricePerStone, common.goldWeight, common.deadline,
     ],
-    estimateMinutes: v => num(v.timePerStone) * num(v.stoneCount),
-    priceLines: (v, minutes) => [
-      { key: 'labour', amount: (minutes / 60) * HOURLY_RATE, detail: `${(minutes / 60).toFixed(1)} h × ${HOURLY_RATE} CHF` },
-      ...(num(v.pricePerStone) && num(v.stoneCount)
-        ? [{ key: 'stones' as const, amount: num(v.pricePerStone) * num(v.stoneCount), detail: `${num(v.stoneCount)} × ${num(v.pricePerStone)} CHF` }]
-        : []),
-    ],
+    estimateMinutes: v => num(v.totalTime),
+    priceLines: perStonePricing(HOURLY_RATE),
   },
   Fassung: {
     type: 'Fassung',
@@ -89,19 +90,14 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
     hourlyRate: 140,
     fields: [
       common.client, common.assignedTo,
-      { name: 'shape', labelKey: 'shape', kind: 'select', options: OPTIONS.fassungShapes },
-      { name: 'material', labelKey: 'material', kind: 'select', options: OPTIONS.fassungMaterials },
+      { name: 'stoneType', labelKey: 'stoneType', kind: 'select', options: OPTIONS.stoneTypes },
+      { name: 'shape', labelKey: 'shape', kind: 'text', options: OPTIONS.fassungShapes },
+      { name: 'material', labelKey: 'material', kind: 'select', options: OPTIONS.materials },
       { name: 'style', labelKey: 'style', kind: 'select', options: OPTIONS.fassungStyles },
-      { name: 'stoneType', labelKey: 'stoneType', kind: 'select', options: OPTIONS.fassungStoneTypes },
       common.stoneCount, common.totalTime, common.pricePerStone, common.goldWeight, common.deadline,
     ],
     estimateMinutes: v => num(v.totalTime),
-    priceLines: (v, minutes) => [
-      { key: 'labour', amount: (minutes / 60) * 140, detail: `${(minutes / 60).toFixed(1)} h × 140 CHF` },
-      ...(num(v.pricePerStone) && num(v.stoneCount)
-        ? [{ key: 'stones' as const, amount: num(v.pricePerStone) * num(v.stoneCount), detail: `${num(v.stoneCount)} × ${num(v.pricePerStone)} CHF` }]
-        : []),
-    ],
+    priceLines: perStonePricing(140),
   },
   Pave: {
     type: 'Pave',
@@ -110,18 +106,15 @@ export const PROJECT_TYPE_CONFIG: Record<ProjectType, ProjectTypeConfig> = {
     hourlyRate: HOURLY_RATE,
     fields: [
       common.client, common.assignedTo,
-      { name: 'stoneType', labelKey: 'stoneType', kind: 'select', options: OPTIONS.allianceStoneTypes },
-      { name: 'material', labelKey: 'material', kind: 'select', options: OPTIONS.allianceMaterials },
+      { name: 'stoneType', labelKey: 'stoneType', kind: 'select', options: OPTIONS.stoneTypes },
+      { name: 'material', labelKey: 'material', kind: 'select', options: OPTIONS.materials },
       { name: 'style', labelKey: 'style', kind: 'select', options: OPTIONS.paveStyles },
       { name: 'layout', labelKey: 'layout', kind: 'select', options: OPTIONS.paveLayouts },
       { name: 'fixation', labelKey: 'fixation', kind: 'select', options: OPTIONS.paveFixations },
       common.stoneCount, common.totalTime, common.pricePerStone, common.goldWeight, common.deadline,
     ],
     estimateMinutes: v => num(v.totalTime),
-    // Pavé is priced per stone (labour is included in the stone price).
-    priceLines: v => [
-      { key: 'stones', amount: num(v.pricePerStone) * num(v.stoneCount), detail: `${num(v.stoneCount)} × ${num(v.pricePerStone)} CHF` },
-    ],
+    priceLines: perStonePricing(HOURLY_RATE),
   },
 };
 

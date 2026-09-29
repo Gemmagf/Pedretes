@@ -17,9 +17,9 @@ export const cat: Translations = {
   dashboardSubtitle: 'Comandes, terminis i càrrega de treball d\'un cop d\'ull.',
   analyticsTitle: 'Analítiques i rendibilitat',
   analyticsSubtitle: 'Facturació, tarifes horàries i recomanacions a partir de les teves dades.',
-  allianceSubtitle: 'Anells Alliance: temps per pedra × nombre de pedres.',
-  fassungSubtitle: 'Encastats individuals: temps total i materials.',
-  paveSubtitle: 'Treballs Pavé: preu per pedra i disposició.',
+  allianceSubtitle: 'Anells Alliance: mida de la pedra, estil i preu per pedra.',
+  fassungSubtitle: 'Encastats: forma de la pedra, estil i preu per pedra.',
+  paveSubtitle: 'Treballs Pavé: tipus de pavé, disseny, fixació i preu per pedra.',
   teamTitle: 'Equip i disponibilitat',
   teamSubtitle: 'Dies laborables, dies lliures i capacitat per persona.',
 
@@ -178,6 +178,7 @@ export const cat: Translations = {
   byPerson: 'Rendiment per persona',
   completedCount: 'Completades',
   openCount: 'Obertes',
+  byPersonHint: 'Assigna comandes a una persona (edita el projecte → Assignat a) per veure el rendiment per persona.',
   trackedHours: 'Hores registrades',
 
   extraHours: 'Hores extra',

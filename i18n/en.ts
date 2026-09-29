@@ -17,9 +17,9 @@ export const en: Translations = {
   dashboardSubtitle: 'Orders, deadlines and workload at a glance.',
   analyticsTitle: 'Analytics & profitability',
   analyticsSubtitle: 'Revenue, hourly rates and recommendations from your data.',
-  allianceSubtitle: 'Alliance rings: time per stone × number of stones.',
-  fassungSubtitle: 'Single settings: total time and materials.',
-  paveSubtitle: 'Pavé work: price per stone and layout.',
+  allianceSubtitle: 'Alliance rings: stone size, style and price per stone.',
+  fassungSubtitle: 'Settings: stone shape, style and price per stone.',
+  paveSubtitle: 'Pavé work: pavé type, layout, fixation and price per stone.',
   teamTitle: 'Team & availability',
   teamSubtitle: 'Working days, days off and capacity per person.',
 
@@ -178,6 +178,7 @@ export const en: Translations = {
   byPerson: 'Performance per person',
   completedCount: 'Completed',
   openCount: 'Open',
+  byPersonHint: 'Assign orders to a person (edit project → Assigned to) to see performance per person.',
   trackedHours: 'Tracked hours',
 
   extraHours: 'Extra hours',

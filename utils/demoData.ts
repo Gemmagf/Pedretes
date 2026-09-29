@@ -208,8 +208,8 @@ export function generateDemoProjects(answers: DemoAnswers, users: User[] = []): 
       agreedPrice,
       goldWeight: rand(1, 8),
       stoneSize: parseFloat((rand(10, 35) / 10).toFixed(1)),
-      stoneType: pickRandom(['Premium', 'Standard', 'Spezial', 'Deluxe']),
-      material: pickRandom(['Material A', 'Material B', 'Material C', 'Spezial']),
+      stoneType: pickRandom(['weiße Diamanten', 'Korund + farbige Diamanten', 'empfindliche Steine']),
+      material: pickRandom(['WG + GG + Roségold', 'Rotgold', 'Platin']),
       style: pickRandom(['Klassisch', 'Modern', 'Vintage', 'Minimalist']),
     });
   }

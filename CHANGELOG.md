@@ -22,6 +22,10 @@ Registre de l'evolució del projecte per sessions de treball.
 - **Accés local**: usuari `Sara` / contrasenya `sareta`, sessió persistida, dades d'exemple realistes (`utils/localSeed.ts`, PRNG determinista) i **exportació/importació JSON** i restauració des de la pàgina Team.
 - **Supabase opcional**: si no hi ha variables d'entorn, el client no s'instancia i l'app arrenca igualment (abans la pàgina quedava en blanc).
 
+### Dades reals del taller
+- `scripts/import_sheet.py` converteix el full «Formular Sareta» (respostes dels 3 formularis de Google) a `data/sareta-projects.json`: 305 comandes reals (210 Fassung, 74 Pavé, 21 Alliance) que són el seed del compte local. Preu = preu per pedra × nombre de pedres; nom derivat quan falta; files de prova excloses.
+- Opcions dels formularis alineades amb els formularis reals (tipus de pedra, materials, estils Fassung/Pavé, disseny «vorhanden / nicht vorhanden», fixació, forma lliure amb suggeriments) i preu calculat per pedra a tots els tipus.
+
 ### Mode demo complet
 - Analítiques amb dades sintètiques (abans mostrava dades de Supabase).
 - Els formularis creen comandes a la demo; predicció intel·ligent i simulador usen les dades de demo.

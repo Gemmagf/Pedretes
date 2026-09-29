@@ -14,7 +14,14 @@ L'app és una SPA estàtica (React + Vite + Tailwind v4) que funciona sense serv
 | **Demo** | Botó «Demo entdecken» a la portada | En memòria, es generen segons el tipus de taller i s'esborren en sortir |
 | **Supabase** | Només si el build té `VITE_SUPABASE_URL` i `VITE_SUPABASE_ANON_KEY` | PostgreSQL a Supabase amb autenticació per correu |
 
-El compte local es carrega la primera vegada amb dades d'exemple realistes (54 comandes de 14 mesos, clients de Zuric, dues joieres) que es poden restaurar des de *Team → Daten*.
+El compte local es carrega la primera vegada amb l'**historial real del taller** (`data/sareta-projects.json`: 305 comandes des del juliol de 2025, importades del full «Formular Sareta»). Es pot restaurar des de *Team → Daten*.
+
+Per actualitzar-lo, exporta el full de càlcul com a `.xlsx` i executa:
+
+```bash
+pip install openpyxl
+python3 scripts/import_sheet.py Formular-Sareta.xlsx
+```
 
 ## Funcionalitats
 
@@ -56,5 +63,6 @@ hooks/useProjects  accés unificat a projectes amb refresc automàtic
 services/          store.ts (interfície Store + store en memòria/localStorage), supabase.ts, auth.ts, goldAPI.ts
 utils/             analytics, scheduling (capacitat), projectTypes (config dels 3 tipus), pdfExport, seeds
 i18n/              traduccions tipades (de és la font de veritat)
-scripts/           migració CSV → Supabase i creació d'usuaris (llegeixen credencials de l'entorn)
+scripts/           import_sheet.py (full de càlcul → JSON), migració a Supabase, creació d'usuaris
+data/              sareta-projects.json: historial real de comandes (seed del compte local)
 ```

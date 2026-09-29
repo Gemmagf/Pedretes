@@ -132,7 +132,7 @@ const Analytics: React.FC = () => {
         </Card>
 
         <Card title={t('byPerson')} icon={<Users className="h-5 w-5" />} bodyClassName="p-2">
-          {people.length === 0 ? <EmptyState title={t('noAnalyticsData')} className="py-6" /> : (
+          {people.length === 0 ? <EmptyState icon={<Users className="h-6 w-6" />} title={t('unassigned')} text={t('byPersonHint')} className="py-6" /> : (
             <ul className="divide-y divide-cream-200">
               {people.map(s => (
                 <li key={s.user.id} className="flex items-center gap-3 px-3 py-3">
